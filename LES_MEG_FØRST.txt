@@ -1,0 +1,8 @@
+Kjør denne i terminalen:
+
+python -m venv .venv
+
+Og så denne:
+
+.venv\Scripts\Activate
+
