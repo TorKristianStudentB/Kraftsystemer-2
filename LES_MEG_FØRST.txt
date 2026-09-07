@@ -6,3 +6,12 @@ Og så denne:
 
 .venv\Scripts\Activate
 
+(hvis du får at du ikke har tilgang, kjør denne i powershell og gjør stegene på nytt)
+
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+----------------------
+og så denne i terminalen etter å ha aktivert .venv, da skal en grønn venv boble komme ved siden av filnavnet.
+
+pip install -r requirements.txt
+
