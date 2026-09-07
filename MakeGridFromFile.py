@@ -133,20 +133,7 @@ def MakeGrid(df):
    return grid
 
 
-#----------Running / quick test----------------
+#----------Running---------------
 if __name__ == "__main__":
    grid = MakeGrid(df)
-
-   print(f"Grid: {grid.Name}  |  Sbase = {grid.Base.Sbase} MVA, Vbase = {grid.Base.Vbase} kV")
-
-   print("\nBuses:")
-   for bus in grid.Buses:
-      print(f"  {bus.Name}: V={bus.Volt}, angle={bus.Angle}, "
-            f"P_gen={bus.P_gen}, Q_gen={bus.Q_gen}, "
-            f"P_load={bus.P_load}, Q_load={bus.Q_load}")
-
-   print("\nLines:")
-   for line in grid.Lines:
-      print(f"  {line.Name}: {line.FromBus}->{line.ToBus}  "
-            f"R={line.R}, X={line.X}, B={line.B}")
 
