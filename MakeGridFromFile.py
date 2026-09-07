@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import random
 
 FolderName="Grid"
 
@@ -16,24 +17,26 @@ def read_latest_xlsx(FolderName):
     return pd.read_excel(latest_file,sheet_name=None)
 
 df = read_latest_xlsx(FolderName)
-print(df)
 
 #----------------Fetching the lates grid xlsx file end-----------------------
-
-
-
 
 
 #----------Making a grid from xslx start----
 class Grid:
 
+   def __init__(self,Name):
+      self.Name=Name
+      self.Base = None      # BaseValues object
+      self.Buses = []       # list of Bus objects
+      self.Lines = []       # list of Line objects
+
 #----------Base values start----------------
    class BaseValues:
       def __init__(self,Sbase,Vbase):
-         self.base = Sbase
+         self.Sbase = Sbase
          self.Vbase = Vbase
-#----------Base values end------------------
 
+#----------Base values end------------------
 
 
 #----------Bus start------------------------
@@ -79,18 +82,71 @@ class Grid:
             self.B = B
             self.FromBus = FromBus
             self.ToBus = ToBus
-
-      def get_impedance(self):
-         return self.R+self.X*1j
-      
-      def PrintLineNumber(self):
-         return self.LineNumber
    
 #----------Lines end----------------------
 #----------Making a grid from xslx end----
 
 
-      
 
-   
-         
+
+def MakeGrid(df):
+   grid = Grid("Grid")
+
+   BusData = df["BusData"]
+   BranchData = df["BranchData"]
+
+   #reading the base values (stored in the first row of BusData)
+   Sbase = BusData["S_base [MVA] "].iloc[0]
+   Vbase = BusData["V_base"].iloc[0]
+   grid.Base = Grid.BaseValues(Sbase, Vbase)
+
+   #reading the busses and implementing it in the grid
+   for i in range(len(BusData)):
+      BusNumber = int(BusData["Bus Num"].iloc[i])
+      bus = Grid.Bus(
+         BusNumber = BusNumber,
+         Name      = f"Bus {BusNumber}",
+         Volt      = float(BusData["V [V]"].iloc[i]),
+         Angle     = float(BusData["Angle [rad]"].iloc[i]),
+         P_gen     = float(BusData["P_gen"].iloc[i]),
+         Q_gen     = float(BusData["Q_gen"].iloc[i]),
+         P_load    = float(BusData["P_load"].iloc[i]),
+         Q_load    = float(BusData["Q_load"].iloc[i]),
+      )
+      grid.Buses.append(bus)
+
+   #reading the lines/branches and implementing it in the grid
+   for i in range(len(BranchData)):
+      FromBus = int(BranchData["From Line"].iloc[i])
+      ToBus   = int(BranchData["To Line"].iloc[i])
+      line = Grid.Line(
+         LineNumber = i + 1,
+         Name       = f"Line {FromBus}-{ToBus}",
+         R          = float(BranchData["R [pu]"].iloc[i]),
+         X          = float(BranchData["X [pu]"].iloc[i]),
+         B          = float(BranchData["Full-Line B [pu]"].iloc[i]),
+         FromBus    = FromBus,
+         ToBus      = ToBus,
+      )
+      grid.Lines.append(line)
+
+   return grid
+
+
+#----------Running / quick test----------------
+if __name__ == "__main__":
+   grid = MakeGrid(df)
+
+   print(f"Grid: {grid.Name}  |  Sbase = {grid.Base.Sbase} MVA, Vbase = {grid.Base.Vbase} kV")
+
+   print("\nBuses:")
+   for bus in grid.Buses:
+      print(f"  {bus.Name}: V={bus.Volt}, angle={bus.Angle}, "
+            f"P_gen={bus.P_gen}, Q_gen={bus.Q_gen}, "
+            f"P_load={bus.P_load}, Q_load={bus.Q_load}")
+
+   print("\nLines:")
+   for line in grid.Lines:
+      print(f"  {line.Name}: {line.FromBus}->{line.ToBus}  "
+            f"R={line.R}, X={line.X}, B={line.B}")
+
