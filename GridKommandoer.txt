@@ -28,6 +28,8 @@ Objektstruktur (slik koden din bygger den):
                ├── .B          -> float
                ├── .Frombus    -> int
                └── .Tobus      -> int
+               └── .admittans()  -> float
+               
 
 VIKTIG:
   - .buses og .lines er vanlige Python-LISTER, ikke pandas-tabeller.

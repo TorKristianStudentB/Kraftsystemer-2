@@ -16,6 +16,7 @@ def read_latest_xlsx(FolderName):
     print(f"Reading: {latest_file}")
     return pd.read_excel(latest_file,sheet_name=None)
 
+
 df = read_latest_xlsx(FolderName)
 
 #----------------Fetching the lates grid xlsx file end-----------------------
@@ -82,6 +83,9 @@ class Grid:
             self.B = B
             self.Frombus = Frombus
             self.Tobus = Tobus
+
+      def admittans(self):
+         return 1/complex(self.R, self.X)
    
 #----------lines end----------------------
 #----------Making a grid from xslx end----
