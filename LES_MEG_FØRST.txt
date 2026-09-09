@@ -15,3 +15,21 @@ og så denne i terminalen etter å ha aktivert .venv, da skal en grønn venv bob
 
 pip install -r requirements.txt
 
+
+################################################## ----Lag console terminal med gridet i vsco -------######################
+
+For å oprette console terminal:
+
+Crtl + shift + p
+
+Skriv: python: Start terminal REPL
+
+Så går du i MakeGridFromFile.py 
+
+Ctrl + A
+
+Shift + Enter
+
+Pek musa i terminalen og høyreklikk, og derreter trykk Enter
+
+Ferdig

@@ -27,8 +27,8 @@ class Grid:
    def __init__(self,Name):
       self.Name=Name
       self.Base = None      # BaseValues object
-      self.Buses = []       # list of Bus objects
-      self.Lines = []       # list of Line objects
+      self.bus = []       # list of bus objects
+      self.line = []       # list of line objects
 
 #----------Base values start----------------
    class BaseValues:
@@ -39,17 +39,17 @@ class Grid:
 #----------Base values end------------------
 
 
-#----------Bus start------------------------
-   class Bus:
-      BusNumber:int
+#----------bus start------------------------
+   class bus:
+      busNumber:int
       Volt:float
       Angle:float
       P_gen:float
       Q_gen:float
       P_load:float
       Q_load:float
-      def __init__(self, BusNumber,Name,Volt,Angle,P_gen,Q_gen,P_load,Q_load):
-        self.name = BusNumber
+      def __init__(self, busNumber,Name,Volt,Angle,P_gen,Q_gen,P_load,Q_load):
+        self.name = busNumber
         self.Name = Name
         self.Volt = Volt
         self.Angle = Angle
@@ -59,31 +59,31 @@ class Grid:
         self.Q_load = Q_load
 
       
-#----------Bus end------------------------
+#----------bus end------------------------
 
 
 
 
 
-#----------Lines start----------------------
-   class Line:   
-      LineNumber:int
+#----------lines start----------------------
+   class line:   
+      lineNumber:int
       R:float
       X:float
       B:float
-      FromBus:int
-      ToBus:int
+      Frombus:int
+      Tobus:int
 
-      def __init__(self,LineNumber,Name,R,X,B,FromBus,ToBus):
-            self.LineNumber = LineNumber
+      def __init__(self,lineNumber,Name,R,X,B,Frombus,Tobus):
+            self.lineNumber = lineNumber
             self.Name = Name
             self.R = R
             self.X = X
             self.B = B
-            self.FromBus = FromBus
-            self.ToBus = ToBus
+            self.Frombus = Frombus
+            self.Tobus = Tobus
    
-#----------Lines end----------------------
+#----------lines end----------------------
 #----------Making a grid from xslx end----
 
 
@@ -92,43 +92,43 @@ class Grid:
 def MakeGrid(df):
    grid = Grid("Grid")
 
-   BusData = df["BusData"]
+   busData = df["BusData"]
    BranchData = df["BranchData"]
 
-   #reading the base values (stored in the first row of BusData)
-   Sbase = BusData["S_base [MVA] "].iloc[0]
-   Vbase = BusData["V_base"].iloc[0]
+   #reading the base values (stored in the first row of busData)
+   Sbase = busData["S_base [MVA] "].iloc[0]
+   Vbase = busData["V_base"].iloc[0]
    grid.Base = Grid.BaseValues(Sbase, Vbase)
 
    #reading the busses and implementing it in the grid
-   for i in range(len(BusData)):
-      BusNumber = int(BusData["Bus Num"].iloc[i])
-      bus = Grid.Bus(
-         BusNumber = BusNumber,
-         Name      = f"Bus {BusNumber}",
-         Volt      = float(BusData["V [V]"].iloc[i]),
-         Angle     = float(BusData["Angle [rad]"].iloc[i]),
-         P_gen     = float(BusData["P_gen"].iloc[i]),
-         Q_gen     = float(BusData["Q_gen"].iloc[i]),
-         P_load    = float(BusData["P_load"].iloc[i]),
-         Q_load    = float(BusData["Q_load"].iloc[i]),
+   for i in range(len(busData)):
+      busNumber = int(busData["Bus Num"].iloc[i])
+      bus = Grid.bus(
+         busNumber = busNumber,
+         Name      = f"bus {busNumber}",
+         Volt      = float(busData["V [V]"].iloc[i]),
+         Angle     = float(busData["Angle [rad]"].iloc[i]),
+         P_gen     = float(busData["P_gen"].iloc[i]),
+         Q_gen     = float(busData["Q_gen"].iloc[i]),
+         P_load    = float(busData["P_load"].iloc[i]),
+         Q_load    = float(busData["Q_load"].iloc[i]),
       )
-      grid.Buses.append(bus)
+      grid.bus.append(bus)
 
    #reading the lines/branches and implementing it in the grid
    for i in range(len(BranchData)):
-      FromBus = int(BranchData["From Line"].iloc[i])
-      ToBus   = int(BranchData["To Line"].iloc[i])
-      line = Grid.Line(
-         LineNumber = i + 1,
-         Name       = f"Line {FromBus}-{ToBus}",
+      Frombus = int(BranchData["From Line"].iloc[i])
+      Tobus   = int(BranchData["To Line"].iloc[i])
+      line = Grid.line(
+         lineNumber = i + 1,
+         Name       = f"line {Frombus}-{Tobus}",
          R          = float(BranchData["R [pu]"].iloc[i]),
          X          = float(BranchData["X [pu]"].iloc[i]),
          B          = float(BranchData["Full-Line B [pu]"].iloc[i]),
-         FromBus    = FromBus,
-         ToBus      = ToBus,
+         Frombus    = Frombus,
+         Tobus      = Tobus,
       )
-      grid.Lines.append(line)
+      grid.line.append(line)
 
    return grid
 

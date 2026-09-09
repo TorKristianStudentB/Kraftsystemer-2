@@ -1,0 +1,168 @@
+==============================================================================
+ KOMMANDOER FOR Å UNDERSØKE Grid-OBJEKTET
+==============================================================================
+
+Objektstruktur (slik koden din bygger den):
+
+  grid
+   ├── .Name                 -> str,  navnet på nettet ("Grid")
+   ├── .Base                 -> BaseValues-objekt
+   │      ├── .Sbase         -> float, S_base [MVA]
+   │      └── .Vbase         -> float, V_base
+   ├── .buses                -> liste med bus-objekter
+   │      └── [busindeks]
+   │           ├── .name     -> int,   busNumber (OBS: liten n = tallet)
+   │           ├── .Name     -> str,   "bus X"  (OBS: stor N = navnet)
+   │           ├── .Volt     -> float
+   │           ├── .Angle    -> float
+   │           ├── .P_gen    -> float
+   │           ├── .Q_gen    -> float
+   │           ├── .P_load   -> float
+   │           └── .Q_load   -> float
+   └── .line                -> liste med line-objekter
+          └── [lineindeks]
+               ├── .lineNumber -> int
+               ├── .Name       -> str, "line From-To"
+               ├── .R          -> float
+               ├── .X          -> float
+               ├── .B          -> float
+               ├── .Frombus    -> int
+               └── .Tobus      -> int
+
+VIKTIG:
+  - .buses og .lines er vanlige Python-LISTER, ikke pandas-tabeller.
+    Derfor bruker du LISTE-INDEKS  grid.buses[0]  -  IKKE  .iloc.
+  - .iloc gjelder KUN pandas DataFrames, altså df-objektet (se nederst).
+  - I skriptet ditt gjør __main__:  Grid = MakeGrid(df)
+    Det overskriver klassen "Grid" med selve instansen. Bytt gjerne til
+    et annet variabelnavn, f.eks.:   grid = MakeGrid(df)
+    Eksemplene under bruker variabelnavnet  grid .
+
+
+------------------------------------------------------------------------------
+ 1) HELE NETTET / TOPPNIVÅ
+------------------------------------------------------------------------------
+grid                        # selve objektet (viser <...object at 0x...>)
+grid.Name                   # navnet på nettet
+vars(grid)                  # alle attributter som dict
+dir(grid)                   # alle navn/metoder på objektet
+len(grid.buses)             # antall busser
+len(grid.lines)             # antall linjer
+
+
+------------------------------------------------------------------------------
+ 2) BASEVERDIER
+------------------------------------------------------------------------------
+grid.Base                   # BaseValues-objektet
+grid.Base.Sbase             # S_base [MVA]
+grid.Base.Vbase             # V_base
+vars(grid.Base)             # begge baseverdiene som dict
+
+
+------------------------------------------------------------------------------
+ 3) BUSSER (liste -> bruk [ ] indeks)
+------------------------------------------------------------------------------
+grid.buses                  # hele lista med bus-objekter
+grid.buses[0]               # første buss
+grid.buses[-1]              # siste buss
+grid.buses[2]               # tredje buss
+
+# Attributter for én buss:
+grid.buses[0].name          # busNumber (tallet)
+grid.buses[0].Name          # "bus X"
+grid.buses[0].Volt          # spenning [V]
+grid.buses[0].Angle         # vinkel [rad]
+grid.buses[0].P_gen
+grid.buses[0].Q_gen
+grid.buses[0].P_load
+grid.buses[0].Q_load
+vars(grid.buses[0])         # alt om buss 0 som dict
+
+# Gå gjennom alle busser:
+for b in grid.buses:
+    print(b.name, b.Volt, b.Angle, b.P_gen, b.P_load)
+
+# Skriv ut alt for alle busser:
+for b in grid.buses:
+    print(vars(b))
+
+
+------------------------------------------------------------------------------
+ 4) LINJER / GRENER (liste -> bruk [ ] indeks)
+------------------------------------------------------------------------------
+grid.lines                  # hele lista med line-objekter
+grid.lines[0]               # første linje
+grid.lines[-1]              # siste linje
+
+# Attributter for én linje:
+grid.lines[0].lineNumber
+grid.lines[0].Name          # "line From-To"
+grid.lines[0].R
+grid.lines[0].X
+grid.lines[0].B
+grid.lines[0].Frombus
+grid.lines[0].Tobus
+vars(grid.lines[0])         # alt om linje 0 som dict
+
+# Gå gjennom alle linjer:
+for l in grid.lines:
+    print(l.Name, l.Frombus, "->", l.Tobus, "R=", l.R, "X=", l.X)
+
+
+------------------------------------------------------------------------------
+ 5) NYTTIGE ONELINERS (søk, filtrering, oversikt)
+------------------------------------------------------------------------------
+# Alle bussnumre:
+[b.name for b in grid.buses]
+
+# Alle spenninger:
+[b.Volt for b in grid.buses]
+
+# Finn en bestemt buss (f.eks. buss nr 3):
+next(b for b in grid.buses if b.name == 3)
+
+# Alle busser med generering (P_gen > 0):
+[b.name for b in grid.buses if b.P_gen > 0]
+
+# Alle busser med last (P_load > 0):
+[b.name for b in grid.buses if b.P_load > 0]
+
+# Alle linjer koblet til buss 1:
+[l.Name for l in grid.lines if l.Frombus == 1 or l.Tobus == 1]
+
+# Finn linje mellom buss 1 og 2:
+[l for l in grid.lines if {l.Frombus, l.Tobus} == {1, 2}]
+
+# Total last i nettet:
+sum(b.P_load for b in grid.buses)
+
+# Total generering i nettet:
+sum(b.P_gen for b in grid.buses)
+
+
+------------------------------------------------------------------------------
+ 6) SE ALT SOM EN PANDAS-TABELL (fin for oversikt)
+------------------------------------------------------------------------------
+import pandas as pd
+
+# Busser som tabell:
+pd.DataFrame([vars(b) for b in grid.buses])
+
+# Linjer som tabell:
+pd.DataFrame([vars(l) for l in grid.lines])
+
+
+------------------------------------------------------------------------------
+ 7) .iloc GJELDER RÅDATAEN (df), IKKE grid-objektet
+------------------------------------------------------------------------------
+# df er en dict av DataFrames (fra read_latest_xlsx):
+df.keys()                   # hvilke ark finnes ("busData", "BranchData", ...)
+df["busData"]               # hele bus-tabellen
+df["busData"].iloc[0]       # første rad
+df["busData"].iloc[0:5]     # rad 0 til 4
+df["busData"]["V [V]"]      # én kolonne
+df["busData"]["V [V]"].iloc[0]   # verdi i rad 0
+df["BranchData"].iloc[0]    # første grenrad
+df["busData"].columns       # kolonnenavn
+df["busData"].head()        # de første radene
+==============================================================================
