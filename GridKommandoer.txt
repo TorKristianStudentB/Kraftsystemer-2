@@ -9,7 +9,7 @@ Objektstruktur (slik koden din bygger den):
    ├── .Base                 -> BaseValues-objekt
    │      ├── .Sbase         -> float, S_base [MVA]
    │      └── .Vbase         -> float, V_base
-   ├── .buses                -> liste med bus-objekter
+   ├── .bus                -> liste med bus-objekter
    │      └── [busindeks]
    │           ├── .name     -> int,   busNumber (OBS: liten n = tallet)
    │           ├── .Name     -> str,   "bus X"  (OBS: stor N = navnet)

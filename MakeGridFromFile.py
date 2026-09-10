@@ -31,6 +31,23 @@ class Grid:
       self.bus = []       # list of bus objects
       self.line = []       # list of line objects
 
+
+   def theveninZth(a,b):
+      #lagre a og b som bus indeks som er funnet
+      #finn alle linjene tilkoblet bus a og bus b
+      #lagre andre siden av bussene i indeksen som er funnet
+      #så indeksen er [a,b] hvor a er start og b er slutt
+      #Så går vi kun ut av a(start), og looper gjennom endepunktene på andre siden av de  linjene som er koblet til a
+      #Dette blir så [a,b,[a,[b,c]],[c,[d]],[d,[b]]]
+      #Siden b er funnet i indeks 1, så er den grenen ferdig, så vi fortsetter nå kun fra c
+      #c går til d, og d går til b, som da sier at den er ferdig.
+      #Det lages så to lister, serier og parrareller, som er tomme foreløbig
+      #Vi leser så fra denne [a,b,[a,[b,c]],[c,[d]],[d,[b]]]
+      #serier [[a,b],[a,c,d,b]]
+      #parrareller [[a,b],[a,c,d,b]]
+      
+
+      return Zth
 #----------Base values start----------------
    class BaseValues:
       def __init__(self,Sbase,Vbase):
