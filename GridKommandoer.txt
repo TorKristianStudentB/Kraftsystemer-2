@@ -2,7 +2,7 @@
  KOMMANDOER FOR Å UNDERSØKE Grid-OBJEKTET
 ==============================================================================
 
-Objektstruktur (slik koden din bygger den):
+Objektstruktur  [P.U]
 
   grid
    ├── .Name                 -> str,  navnet på nettet ("Grid")
@@ -19,16 +19,39 @@ Objektstruktur (slik koden din bygger den):
    │           ├── .Q_gen    -> float
    │           ├── .P_load   -> float
    │           └── .Q_load   -> float
-   └── .line                -> liste med line-objekter
-          └── [lineindeks]
-               ├── .lineNumber -> int
-               ├── .Name       -> str, "line From-To"
-               ├── .R          -> float
-               ├── .X          -> float
-               ├── .B          -> float
-               ├── .Frombus    -> int
-               └── .Tobus      -> int
-               └── .admittans()  -> float
+   ├── .line                -> liste med line-objekter
+   |       └── [lineindeks]
+   |           ├── .lineNumber   -> int
+   |           ├── .Name         -> str, "line From-To"
+   |           ├── .R            -> float
+   |           ├── .X            -> float
+   |           ├── .B            -> float
+   |           ├── .Frombus      -> int
+   |           ├── .Tobus        -> int
+   |           └── .admittans()  -> float
+   |
+   ├── .trafo               -> trafo med trafo-objekter
+   |        └── [trafoindeks]
+   |            ├── .name        ->  str
+   |            ├── .type        ->  str
+   |            ├── .ratio       -> float
+   |            ├── .Frombus     -> int
+   |            ├── .Tobus       -> int
+   |            ├── .R           -> float
+   |            ├── .X           -> float
+   |            ├── .voltP       -> float
+   |            ├── .voltS       -> float
+   |            └── .admittans()  -> float
+   |
+   ├── .theveninZth(bus1,bus2)
+   |
+   ├── .admittansmatrise()
+   |
+   |
+   |
+   |
+               
+   
                
 
 VIKTIG:

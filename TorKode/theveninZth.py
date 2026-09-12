@@ -20,7 +20,6 @@ def theveninZth(grid,bus1,bus2):
       midlertidig=[]
       midlertidigindex=[]
       for l in grid.line:
-         print(l)
          if l.Frombus==node:
             midlertidig.append(l.Tobus)
             midlertidigindex.append(f"1+{l.Tobus}")

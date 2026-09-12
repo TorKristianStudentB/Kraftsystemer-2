@@ -5,32 +5,41 @@ import random
 import sys
 import numpy as np
 
+
+
 #--------------------Hente filstien til megselv, må øke til mer--------
 current_path = os.getcwd()
 current_path=Path(current_path)
 TorKodePath=current_path
 TorKodePath=TorKodePath / "TorKode"
 sys.path.append(str(TorKodePath))
-from theveninZth import theveninZth
 #--------------------Hente filstien til megselv, må øke til mer--------
 
+#--------funksjonshenting---------
+from theveninZth import theveninZth
+from admittansmatrise import cutsem
+#--------funksjonshenting---------
 
-FolderName="Grid"
+
+
 
 #----------------Fetching the lates grid xlsx file start-----------------------
-def read_latest_xlsx(FolderName):
+FolderName = "Grid"
+FileName = "GridVersion1.xlsx"
+
+def read_xlsx(FolderName, FileName):
     folder = Path(FolderName)
-    # Find all xlsx files in the folder and subfolders
-    files = list(folder.rglob("*.xlsx"))
+    # Find file with the specific name
+    files = list(folder.rglob(FileName))
     if not files:
-        raise FileNotFoundError(f"No .xlsx files found in '{FolderName}'")
-    # Find the newest file
-    latest_file = max(files, key=lambda f: f.stat().st_mtime)
-    print(f"Reading: {latest_file}")
-    return pd.read_excel(latest_file,sheet_name=None)
+        raise FileNotFoundError(
+            f"Could not find '{FileName}' in '{FolderName}'"
+        )
+    file = files[0]
+    print(f"Reading: {file}")
+    return pd.read_excel(file, sheet_name=None)
 
-
-df = read_latest_xlsx(FolderName)
+df = read_xlsx(FolderName, FileName)
 
 #----------------Fetching the lates grid xlsx file end-----------------------
 
@@ -48,6 +57,8 @@ class Grid:
    def thevenin(self,bus1,bus2):
       return theveninZth(self,bus1,bus2)
 
+   def admittansmatrise(self):
+      return cutsem(self)
 
 #----------Base values start----------------
    class BaseValues:
@@ -81,9 +92,6 @@ class Grid:
 #----------bus end------------------------
 
 
-
-
-
 #----------lines start----------------------
    class line:   
       lineNumber:int
@@ -102,13 +110,42 @@ class Grid:
             self.Frombus = Frombus
             self.Tobus = Tobus
 
+
       def admittans(self):
          return 1/complex(self.R, self.X)
 
-      def impedans(self):
-         return 1/complex(self.R,self.X)
    
 #----------lines end----------------------
+      
+
+#----------Trafo start----------------------
+   class trafo:   
+      name:str
+      type:str
+      ratio:float
+      Frombus:float
+      Tobus:int
+      R:float
+      X:float
+      voltP:float
+      voltS:float
+
+      def __init__(self, name, type, ratio, Frombus, Tobus, R, X, voltP, voltS):
+         self.Name = name
+         self.Type = type
+         self.Ratio = ratio
+         self.Frombus = Frombus
+         self.Tobus = Tobus
+         self.R = R
+         self.X = X
+         self.voltP = voltP
+         self.voltS = voltS
+         
+
+      def admittans(self):
+            return 1/complex(self.R, self.X)
+
+#----------Trafo end------------------------
 #----------Making a grid from xslx end----
 
 
