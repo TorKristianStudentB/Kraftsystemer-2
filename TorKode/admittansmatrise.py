@@ -1,16 +1,15 @@
-#Anvender cutsem algoritmen
+
 import numpy as np
 
 def cutsem(grid):
-
+   #----initaliserer admittansmatrisen----
    n1=len(grid.line)
-   #n2=len(grid.trafo)
-   #print(n2)
-
-   N=n1        #+n2
-
+   n2=len(grid.trafo)
+   N=n1+n2
    Y = np.zeros((N, N), dtype=complex)
+   #----initaliserer admittansmatrisen----
 
+   #------Start: Finner 2x2 matrisen på alle linjene-----
    for l in (grid.line):
       i=l.Frombus
       j=l.Tobus
@@ -18,8 +17,8 @@ def cutsem(grid):
       yshunt=complex(0,l.B)
 
       #---------ikke diagonal-------
-      Y[i,j]= -1*yij
-      Y[j,i]= -1*yij    
+      Y[i,j]=Y[i,j]+(-1*yij)
+      Y[j,i]=Y[j,i]+ (-1*yij)    
       #---------ikke diagonal-------
 
       #---------diagonal------------          
@@ -27,30 +26,41 @@ def cutsem(grid):
       Y[j,j]=Y[i,i]+yij+yshunt/2
       #---------diagonal------------
    
-      
-      """
-      #------------Hør med foreleser hvordan primær og sekundær er gitt med tanke på a:1-------
-      if isinstance(l,trafo):  
-
-         if l.type=="tap":
-            a=l.ratio
-            i=l.Frombus
-            j=l.Tobus
-            yij=l.admittans()
+   #------END: Finner 2x2 matrisen på alle linjene-----
    
+   #------Start: Finner 2x2 matrisen på alle trafoene-----
+   for k in grid.trafo:  
+      if k.Type=='tap':
+         a=1/k.ratio #alle ratioene er <1, så lavest spenning er i teller
+         i=k.Frombus
+         j=k.Tobus
+         yij=k.admittans()
+
+         if grid.bus[i].Vbase>=grid.bus[j].Vbase:
+            #---------ikke diagonal-------
+            Y[i,j]= Y[i,j]+(-1*yij/a)   
+            Y[j,i]=Y[j,i]+(-1*yij/a)
+            #---------ikke diagonal-------
+
+            #---------diagonal------------          
+            Y[i,i]=Y[i,i]+yij/a**2
+            Y[j,j]=Y[i,i]+yij
+            #---------diagonal------------
+         else: #variablebytte på i og j
+            q=i
+            p=j
+            i=p
+            j=q
             #---------ikke diagonal-------
             Y[i,j]= -1*yij/a   
             #---------ikke diagonal-------
-   
+
             #---------diagonal------------          
-            Y[i,i]=Y[i,i]+yij/a^2
+            Y[i,i]=Y[i,i]+yij/a**2
             Y[j,j]=Y[i,i]+yij
             #---------diagonal------------
-
-         #-----------må undersøke denne mer--------
-         #if l.type=="phase-shifting":
-         #-----------må undersøke denne mer--------
-         """
+   #------Start: Finner 2x2 matrisen på alle trafoene-----
+      
 
    return Y      
             

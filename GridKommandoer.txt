@@ -2,66 +2,60 @@
  KOMMANDOER FOR Å UNDERSØKE Grid-OBJEKTET
 ==============================================================================
 
-Objektstruktur  [P.U]
+Objektstruktur
 
   grid
    ├── .Name                 -> str,  navnet på nettet ("Grid")
    ├── .Base                 -> BaseValues-objekt
    │      ├── .Sbase         -> float, S_base [MVA]
-   │      └── .Vbase         -> float, V_base
-   ├── .bus                -> liste med bus-objekter
+   │      └── .Vbase         -> float, V_base [kV]
+   │
+   ├── .bus                  -> liste med bus-objekter
    │      └── [busindeks]
-   │           ├── .name     -> int,   busNumber (OBS: liten n = tallet)
-   │           ├── .Name     -> str,   "bus X"  (OBS: stor N = navnet)
-   │           ├── .Volt     -> float
-   │           ├── .Angle    -> float
+   │           ├── .busNumber     -> int,   busNumber (OBS: liten n = tallet)
+   │           ├── .Name     -> str,   trafostasjon-navn (OBS: stor N = navnet)
+   │           ├── .Volt     -> float, spenning [p.u.]
+   │           ├── .Angle    -> float, vinkel [rad]
    │           ├── .P_gen    -> float
    │           ├── .Q_gen    -> float
    │           ├── .P_load   -> float
-   │           └── .Q_load   -> float
-   ├── .line                -> liste med line-objekter
-   |       └── [lineindeks]
-   |           ├── .lineNumber   -> int
-   |           ├── .Name         -> str, "line From-To"
-   |           ├── .R            -> float
-   |           ├── .X            -> float
-   |           ├── .B            -> float
-   |           ├── .Frombus      -> int
-   |           ├── .Tobus        -> int
-   |           └── .admittans()  -> float
-   |
-   ├── .trafo               -> trafo med trafo-objekter
-   |        └── [trafoindeks]
-   |            ├── .name        ->  str
-   |            ├── .type        ->  str
-   |            ├── .ratio       -> float
-   |            ├── .Frombus     -> int
-   |            ├── .Tobus       -> int
-   |            ├── .R           -> float
-   |            ├── .X           -> float
-   |            ├── .voltP       -> float
-   |            ├── .voltS       -> float
-   |            └── .admittans()  -> float
-   |
-   ├── .theveninZth(bus1,bus2)
-   |
-   ├── .admittansmatrise()
-   |
-   |
-   |
-   |
-               
-   
-               
-
-VIKTIG:
-  - .buses og .lines er vanlige Python-LISTER, ikke pandas-tabeller.
-    Derfor bruker du LISTE-INDEKS  grid.buses[0]  -  IKKE  .iloc.
-  - .iloc gjelder KUN pandas DataFrames, altså df-objektet (se nederst).
-  - I skriptet ditt gjør __main__:  Grid = MakeGrid(df)
-    Det overskriver klassen "Grid" med selve instansen. Bytt gjerne til
-    et annet variabelnavn, f.eks.:   grid = MakeGrid(df)
-    Eksemplene under bruker variabelnavnet  grid .
+   │           ├── .Q_load   -> float
+   │           ├── .bidz     -> str,   budområde (f.eks. "NO1")
+   │           └── .Vbase    -> float, spenningsnivå [kV]
+   │
+   ├── .line                 -> liste med line-objekter
+   │      └── [lineindeks]
+   │           ├── .lineNumber   -> int
+   │           ├── .Name         -> str, "bussfra – busstil"
+   │           ├── .R            -> float
+   │           ├── .X            -> float
+   │           ├── .B            -> float
+   │           ├── .Frombus      -> int
+   │           ├── .Tobus        -> int
+   │           ├── .lenght       -> float, lengde [m]
+   │           └── .admittans()  -> complex, 1/(R+jX)
+   │
+   ├── .trafo                -> liste med trafo-objekter
+   │      └── [trafoindeks]
+   │           ├── .Name         -> str
+   │           ├── .Type         -> str  ("tap")
+   │           ├── .Ratio        -> float ("tror ikke denne stemmer")
+   │           ├── .Frombus      -> int
+   │           ├── .Tobus        -> int
+   │           ├── .R            -> float
+   │           ├── .X            -> float
+   │           └── .admittans()  -> complex, 1/(R+jX)
+   │
+   ├── .gen                  -> liste med gen-objekter
+   │      └── [genindeks]
+   │           ├── .name         -> str,   generatornavn
+   │           ├── .bus          -> float, buss-id generatoren står på
+   │           ├── .P_max        -> int,   Pmax
+   │           ├── .Q_max        -> float, Qmax (test)
+   │           └── .Q_min        -> float, Qmin (test)
+   │
+   ├── .thevenin(bus1, bus2)      -> Thevenin-impedans mellom to busser
+   └── .admittansmatrise()        -> Y-buss-matrise (cutsem)
 
 
 ------------------------------------------------------------------------------
@@ -71,8 +65,10 @@ grid                        # selve objektet (viser <...object at 0x...>)
 grid.Name                   # navnet på nettet
 vars(grid)                  # alle attributter som dict
 dir(grid)                   # alle navn/metoder på objektet
-len(grid.buses)             # antall busser
-len(grid.lines)             # antall linjer
+len(grid.bus)               # antall busser
+len(grid.line)              # antall linjer
+len(grid.trafo)             # antall trafoer
+len(grid.gen)               # antall generatorer
 
 
 ------------------------------------------------------------------------------
@@ -87,107 +83,163 @@ vars(grid.Base)             # begge baseverdiene som dict
 ------------------------------------------------------------------------------
  3) BUSSER (liste -> bruk [ ] indeks)
 ------------------------------------------------------------------------------
-grid.buses                  # hele lista med bus-objekter
-grid.buses[0]               # første buss
-grid.buses[-1]              # siste buss
-grid.buses[2]               # tredje buss
+grid.bus                    # hele lista med bus-objekter
+grid.bus[0]                 # første buss
+grid.bus[-1]                # siste buss
+grid.bus[2]                 # tredje buss
 
 # Attributter for én buss:
-grid.buses[0].name          # busNumber (tallet)
-grid.buses[0].Name          # "bus X"
-grid.buses[0].Volt          # spenning [V]
-grid.buses[0].Angle         # vinkel [rad]
-grid.buses[0].P_gen
-grid.buses[0].Q_gen
-grid.buses[0].P_load
-grid.buses[0].Q_load
-vars(grid.buses[0])         # alt om buss 0 som dict
+grid.bus[0].name            # busNumber (tallet)
+grid.bus[0].Name            # trafostasjon-navn
+grid.bus[0].Volt            # spenning [p.u.]
+grid.bus[0].Angle           # vinkel [rad]
+grid.bus[0].P_gen
+grid.bus[0].Q_gen
+grid.bus[0].P_load
+grid.bus[0].Q_load
+grid.bus[0].bidz            # budområde
+grid.bus[0].Vbase           # spenningsnivå [kV]
+vars(grid.bus[0])           # alt om buss 0 som dict
 
 # Gå gjennom alle busser:
-for b in grid.buses:
+for b in grid.bus:
     print(b.name, b.Volt, b.Angle, b.P_gen, b.P_load)
 
 # Skriv ut alt for alle busser:
-for b in grid.buses:
+for b in grid.bus:
     print(vars(b))
 
 
 ------------------------------------------------------------------------------
  4) LINJER / GRENER (liste -> bruk [ ] indeks)
 ------------------------------------------------------------------------------
-grid.lines                  # hele lista med line-objekter
-grid.lines[0]               # første linje
-grid.lines[-1]              # siste linje
+grid.line                   # hele lista med line-objekter
+grid.line[0]                # første linje
+grid.line[-1]               # siste linje
 
 # Attributter for én linje:
-grid.lines[0].lineNumber
-grid.lines[0].Name          # "line From-To"
-grid.lines[0].R
-grid.lines[0].X
-grid.lines[0].B
-grid.lines[0].Frombus
-grid.lines[0].Tobus
-vars(grid.lines[0])         # alt om linje 0 som dict
+grid.line[0].lineNumber
+grid.line[0].Name           # "bussfra – busstil"
+grid.line[0].R
+grid.line[0].X
+grid.line[0].B
+grid.line[0].Frombus
+grid.line[0].Tobus
+grid.line[0].lenght         # lengde [m]
+grid.line[0].admittans()    # 1/(R+jX)  (komplekst)
+vars(grid.line[0])          # alt om linje 0 som dict
 
 # Gå gjennom alle linjer:
-for l in grid.lines:
+for l in grid.line:
     print(l.Name, l.Frombus, "->", l.Tobus, "R=", l.R, "X=", l.X)
 
 
 ------------------------------------------------------------------------------
- 5) NYTTIGE ONELINERS (søk, filtrering, oversikt)
+ 5) TRAFOER (liste -> bruk [ ] indeks)
+------------------------------------------------------------------------------
+grid.trafo                  # hele lista med trafo-objekter
+grid.trafo[0]               # første trafo
+
+# Attributter for én trafo:
+grid.trafo[0].Name
+grid.trafo[0].Type          # "tap"
+grid.trafo[0].Ratio
+grid.trafo[0].Frombus
+grid.trafo[0].Tobus
+grid.trafo[0].R
+grid.trafo[0].X
+grid.trafo[0].admittans()   # 1/(R+jX)  (komplekst)
+vars(grid.trafo[0])         # alt om trafo 0 som dict
+
+# Gå gjennom alle trafoer:
+for t in grid.trafo:
+    print(t.Name, t.Frombus, "->", t.Tobus, "ratio=", t.Ratio)
+
+
+------------------------------------------------------------------------------
+ 6) GENERATORER (liste -> bruk [ ] indeks)
+------------------------------------------------------------------------------
+grid.gen                    # hele lista med gen-objekter
+grid.gen[0]                 # første generator
+
+# Attributter for én generator:
+grid.gen[0].name            # generatornavn
+grid.gen[0].bus             # buss-id generatoren står på
+grid.gen[0].P_max           # Pmax
+grid.gen[0].Q_max           # Qmax (test)
+grid.gen[0].Q_min           # Qmin (test)
+vars(grid.gen[0])           # alt om generator 0 som dict
+
+# Gå gjennom alle generatorer:
+for g in grid.gen:
+    print(g.name, "bus", g.bus, "Pmax=", g.P_max)
+
+
+------------------------------------------------------------------------------
+ 7) NYTTIGE ONELINERS (søk, filtrering, oversikt)
 ------------------------------------------------------------------------------
 # Alle bussnumre:
-[b.name for b in grid.buses]
+[b.name for b in grid.bus]
 
 # Alle spenninger:
-[b.Volt for b in grid.buses]
+[b.Volt for b in grid.bus]
 
 # Finn en bestemt buss (f.eks. buss nr 3):
-next(b for b in grid.buses if b.name == 3)
+next(b for b in grid.bus if b.name == 3)
 
 # Alle busser med generering (P_gen > 0):
-[b.name for b in grid.buses if b.P_gen > 0]
+[b.name for b in grid.bus if b.P_gen > 0]
 
 # Alle busser med last (P_load > 0):
-[b.name for b in grid.buses if b.P_load > 0]
+[b.name for b in grid.bus if b.P_load > 0]
 
 # Alle linjer koblet til buss 1:
-[l.Name for l in grid.lines if l.Frombus == 1 or l.Tobus == 1]
+[l.Name for l in grid.line if l.Frombus == 1 or l.Tobus == 1]
 
 # Finn linje mellom buss 1 og 2:
-[l for l in grid.lines if {l.Frombus, l.Tobus} == {1, 2}]
+[l for l in grid.line if {l.Frombus, l.Tobus} == {1, 2}]
+
+# Alle generatorer på buss 0:
+[g.name for g in grid.gen if g.bus == 0]
 
 # Total last i nettet:
-sum(b.P_load for b in grid.buses)
+sum(b.P_load for b in grid.bus)
 
 # Total generering i nettet:
-sum(b.P_gen for b in grid.buses)
+sum(b.P_gen for b in grid.bus)
 
 
 ------------------------------------------------------------------------------
- 6) SE ALT SOM EN PANDAS-TABELL (fin for oversikt)
+ 8) SE ALT SOM EN PANDAS-TABELL (fin for oversikt)
 ------------------------------------------------------------------------------
 import pandas as pd
 
 # Busser som tabell:
-pd.DataFrame([vars(b) for b in grid.buses])
+pd.DataFrame([vars(b) for b in grid.bus])
 
 # Linjer som tabell:
-pd.DataFrame([vars(l) for l in grid.lines])
+pd.DataFrame([vars(l) for l in grid.line])
+
+# Trafoer som tabell:
+pd.DataFrame([vars(t) for t in grid.trafo])
+
+# Generatorer som tabell:
+pd.DataFrame([vars(g) for g in grid.gen])
 
 
 ------------------------------------------------------------------------------
- 7) .iloc GJELDER RÅDATAEN (df), IKKE grid-objektet
+ 9) .iloc GJELDER RÅDATAEN (df), IKKE grid-objektet
 ------------------------------------------------------------------------------
-# df er en dict av DataFrames (fra read_latest_xlsx):
-df.keys()                   # hvilke ark finnes ("busData", "BranchData", ...)
-df["busData"]               # hele bus-tabellen
-df["busData"].iloc[0]       # første rad
-df["busData"].iloc[0:5]     # rad 0 til 4
-df["busData"]["V [V]"]      # én kolonne
-df["busData"]["V [V]"].iloc[0]   # verdi i rad 0
-df["BranchData"].iloc[0]    # første grenrad
-df["busData"].columns       # kolonnenavn
-df["busData"].head()        # de første radene
+# df er en dict av DataFrames (fra read_xlsx):
+df.keys()                   # hvilke ark finnes ("bus", "line", "trafo", "gen", ...)
+df["bus"]                   # hele bus-tabellen
+df["bus"].iloc[0]           # første rad
+df["bus"].iloc[0:5]         # rad 0 til 4
+df["bus"]["V [P.U]"]        # én kolonne
+df["bus"]["V [P.U]"].iloc[0]   # verdi i rad 0
+df["line"].iloc[0]          # første linjerad
+df["trafo"].iloc[0]         # første traforad
+df["gen"].iloc[0]           # første generatorrad
+df["bus"].columns           # kolonnenavn
+df["bus"].head()            # de første radene
 ==============================================================================
