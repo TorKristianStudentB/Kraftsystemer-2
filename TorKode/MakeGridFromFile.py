@@ -18,7 +18,6 @@ sys.path.append(str(TorKodePath))
 #--------funksjonshenting---------
 from theveninZth import theveninZth
 from admittansmatrise import cutsem
-from Newton_Raphson import Newton_Raphson
 #--------funksjonshenting---------
 
 
@@ -63,8 +62,6 @@ class Grid:
    def admittansmatrise(self):
       return cutsem(self)
 
-   def loadflowsolution(self):
-      return Newton_Raphson(self)
 
 #----------Base values start----------------
    class BaseValues:
@@ -266,5 +263,4 @@ def MakeGrid(df):
 #----------Running---------------
 if __name__ == "__main__":
    grid = MakeGrid(df)
-   print(grid.admittansmatrise())
    
