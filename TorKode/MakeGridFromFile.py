@@ -18,6 +18,7 @@ sys.path.append(str(TorKodePath))
 #--------funksjonshenting---------
 from theveninZth import theveninZth
 from admittansmatrise import cutsem
+from NewtonsRaphson import NewtonRaphson
 #--------funksjonshenting---------
 
 
@@ -61,6 +62,9 @@ class Grid:
 
    def admittansmatrise(self):
       return cutsem(self)
+   
+   def loadflowsolutionNR(self):
+      return NewtonRaphson(self)
 
 
 #----------Base values start----------------
