@@ -26,7 +26,7 @@ from NewtonsRaphson import NewtonRaphson
 
 #----------------Fetching the lates grid xlsx file start-----------------------
 FolderName = "Grid"
-FileName = "Nordic490_komplett.xlsx"
+FileName = "GridVersjon1.xlsx"
 
 def read_xlsx(FolderName, FileName):
     folder = Path(FolderName)
@@ -48,14 +48,6 @@ df = read_xlsx(FolderName, FileName)
 #----------Making a grid from xslx start----
 class Grid:
 
-   class Solution:                    # nøstet klasse: holder de konvergerte verdiene
-        def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte):
-            self.volt = volt
-            self.angle = angle
-            self.iterasjoner = iterasjoner
-            self.mismatch = mismatch
-            self.konvergerte = konvergerte
-
    def __init__(self,Name):
       self.Name=Name
       self.Base = None     # BaseValues object
@@ -73,10 +65,10 @@ class Grid:
       return cutsem(self)
    
    def loadflowsolutionNR(self):
-      grid_solution = copy.deepcopy(self)
-      return NewtonRaphson(grid_solution)
+      return NewtonRaphson(self)
    
-   
+
+#-----------De løste verdiene i nettet etter en lastflytanalyse-----------
    class solution:   
       def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte):
          self.volt = volt               
@@ -84,10 +76,7 @@ class Grid:
          self.iterasjoner = iterasjoner    
          self.mismatch = mismatch          
          self.konvergerte = konvergerte  
-
-         def loadflowsolutionNR(self):
-               grid_solution = copy.deepcopy(self)
-               return NewtonRaphson(grid_solution)  
+#-----------De løste verdiene i nettet etter en lastflytanalyse-----------
 
 
 #----------Base values start----------------
