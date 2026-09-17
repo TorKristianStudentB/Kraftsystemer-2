@@ -4,6 +4,8 @@ import numpy as np
 def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med busindeks=0 ref
    Y=grid.admittansmatrise() #la den her for at ting går fortere
 
+   
+
    #---------oppretter klasser PV og PQ for bussene--------------------
    def busclassifier():
       bus=[]
@@ -150,9 +152,10 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
     size, pos = dimensjon_of_system()
 
     J = np.zeros((size, size))
-
+    
+    #----------setter opp J matrisen med lignignenge over-----------
     for i in range(n):
-        if pos[i] is None:
+        if pos[i] is None: #referansen
             continue
         ri = pos[i]
         for j in range(n):
@@ -173,6 +176,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
                     J[ri,   cj+1] = dpi_dvj(i, j)
                 if busPVPQ[i] == "PQ" and busPVPQ[j] == "PQ":
                     J[ri+1, cj+1] = dqi_dvj(i, j)
+      #----------setter opp J matrisen med lignignenge over-----------
 
     return J
    #---------------Lager jacobian matrisen, bruker busclassifier til å strukturere den----------------
@@ -213,6 +217,22 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
       solution=False
 
       J=jacobian()
+
+      print("size:", size)
+
+      for i in range(len(grid.bus)):
+         if i >= len(grid.bus)-10:
+            print(
+                  "bus:", i,
+                  "type:", busPVPQ[i],
+                  "pos:", pos[i]
+            )
+
+      zero_rows = np.where(np.all(np.isclose(J, 0), axis=1))[0]
+      zero_cols = np.where(np.all(np.isclose(J, 0), axis=0))[0]
+
+      print("Nullrader:", zero_rows)
+      print("Nullkolonner:", zero_cols)
 
       print("busPVPQ:", busPVPQ)
       print("J:")

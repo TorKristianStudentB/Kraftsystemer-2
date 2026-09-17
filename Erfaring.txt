@@ -1,0 +1,4 @@
+Dimensjonen på jacobian ble feil fordi jeg ikke sjekket om bussene var en del av nettet
+
+Dimensjon feilen viste seg å være hardere enn først antatt
+

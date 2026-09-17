@@ -55,7 +55,8 @@ class Grid:
       self.line = []       # list of line objects
       self.trafo = []      # list of trafo objects
       self.gen = []        # list of generators objects
-      self.solution = []        # Konvergerte verdier i nettet
+      self.solution = []    
+
 
 
    def thevenin(self,bus1,bus2):
@@ -66,6 +67,8 @@ class Grid:
    
    def loadflowsolutionNR(self):
       return NewtonRaphson(self)
+   
+
    
 
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
@@ -112,11 +115,7 @@ class Grid:
         self.bidz = bidz
         self.Vbase = Vbase
 
-      def type(self):
-
-         
-         return 
-
+           
 #----------bus end------------------------
 
 
@@ -202,6 +201,29 @@ def MakeGrid(df):
    trafoDF = df["trafo"]
    genDF   = df["gen"]
    #---------Oppretter objektet grid og leser excel arket-------
+
+   #---------Finner busser som står alene-----------------------
+   def finn_elementer_alene():
+
+      # Alle busser som finnes i linjer
+      busser_i_line = set(lineDF["bus0"]).union(set(lineDF["bus1"]))
+
+      # Alle busser som finnes i transformatorer
+      busser_i_trafo = set(trafoDF["bus0"]).union(set(trafoDF["bus1"]))
+
+      # Busser som ikke finnes i verken linje eller trafo
+      busser_alene = []
+
+      for bus in busDF["bus_id"]:
+         if bus not in busser_i_line and bus not in busser_i_trafo:
+            busser_alene.append(int(bus))
+
+      return busser_alene
+
+   busser_alene = finn_elementer_alene()
+
+   print("Busser alene:", busser_alene)
+   #---------Finner busser som står alene-----------------------
 
    #---------------Leser globale verdier base-----------
    Sbase = float(busDF["S_base [MVA] "].iloc[0])

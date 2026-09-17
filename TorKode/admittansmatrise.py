@@ -3,9 +3,7 @@ import numpy as np
 
 def cutsem(grid):
    #----initaliserer admittansmatrisen----
-   n1=len(grid.line)
-   n2=len(grid.trafo)
-   N=n1+n2
+   N=len(grid.bus)
    Y = np.zeros((N, N), dtype=complex)
    #----initaliserer admittansmatrisen----
 
