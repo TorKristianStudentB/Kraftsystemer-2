@@ -48,6 +48,14 @@ df = read_xlsx(FolderName, FileName)
 #----------Making a grid from xslx start----
 class Grid:
 
+   class Solution:                    # nøstet klasse: holder de konvergerte verdiene
+        def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte):
+            self.volt = volt
+            self.angle = angle
+            self.iterasjoner = iterasjoner
+            self.mismatch = mismatch
+            self.konvergerte = konvergerte
+
    def __init__(self,Name):
       self.Name=Name
       self.Base = None     # BaseValues object
@@ -55,6 +63,7 @@ class Grid:
       self.line = []       # list of line objects
       self.trafo = []      # list of trafo objects
       self.gen = []        # list of generators objects
+      self.solution = []        # Konvergerte verdier i nettet
 
 
    def thevenin(self,bus1,bus2):
@@ -64,7 +73,21 @@ class Grid:
       return cutsem(self)
    
    def loadflowsolutionNR(self):
-      return NewtonRaphson(self)
+      grid_solution = copy.deepcopy(self)
+      return NewtonRaphson(grid_solution)
+   
+   
+   class solution:   
+      def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte):
+         self.volt = volt               
+         self.angle = angle                
+         self.iterasjoner = iterasjoner    
+         self.mismatch = mismatch          
+         self.konvergerte = konvergerte  
+
+         def loadflowsolutionNR(self):
+               grid_solution = copy.deepcopy(self)
+               return NewtonRaphson(grid_solution)  
 
 
 #----------Base values start----------------
