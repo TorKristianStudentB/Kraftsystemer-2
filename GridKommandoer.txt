@@ -56,6 +56,7 @@ Objektstruktur
    │
    ├── .thevenin(bus1, bus2)      -> Thevenin-impedans mellom to busser
    └── .admittansmatrise()        -> Y-buss-matrise (cutsem)
+   
 
 
 ------------------------------------------------------------------------------
