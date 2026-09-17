@@ -26,7 +26,7 @@ from NewtonsRaphson import NewtonRaphson
 
 #----------------Fetching the lates grid xlsx file start-----------------------
 FolderName = "Grid"
-FileName = "GridVersjon1.xlsx"
+FileName = "Nordic490_komplett.xlsx"
 
 def read_xlsx(FolderName, FileName):
     folder = Path(FolderName)
