@@ -167,9 +167,28 @@ def NewtonRaphson(grid): #Furuseth er ref
                         J[k+1,j]=dqi_ddeltai(i)
                      else:
                         J[k,j]=dpi_ddeltaj(i,j)
-                        J[k,j]=dqi_ddeltaj(i,j)
+                        J[k+1,j]=dqi_ddeltaj(i,j)
+                     k=k+2
                else:
-                  
+                     if j==k:
+                        J[k,j]=dpi_ddeltai(k):
+                        J[k,j+1]=dpi_dvi
+                     else:
+                        J[k,j]=dpi_ddeltaj(k,j)
+                        J[k,j+1]=dpi_dvj(k,j)
+                  k=k+1
+                  else:
+                     if j==k:
+                        J[k,j]=dpi_ddeltai(i):
+                        J[k,j+1]=dpi_dvi(i)
+                        J[k+1,j]=dqi_ddeltai(i)
+                        J[k+1,j+1]=dqi_dvi(i)
+                     else:
+                        J[k,j]=dpi_ddeltaj(i,j)
+                        J[k,j]=dqi_ddeltaj(i,j)
+                     k=k+2
+               else:
+
           #-----------------bygge jacobian matrisen utifra funksjonene over----------
 
 
@@ -215,5 +234,5 @@ def NewtonRaphson(grid): #Furuseth er ref
 
 
 
-   return bus
+   return solution
     #-----------------Her er Newtons Raphson metoden, her er kjernen-------------------
