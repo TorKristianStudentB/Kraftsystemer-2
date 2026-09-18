@@ -16,18 +16,18 @@ def cutsem(grid):
 
       #---------ikke diagonal-------
       Y[i,j]=Y[i,j]+(-1*yij)
-      Y[j,i]=Y[j,i]+ (-1*yij)    
+      Y[j,i]=Y[j,i]+ (-1*yij)
       #---------ikke diagonal-------
 
-      #---------diagonal------------          
-      Y[i,i]=Y[i,i]+yij+yshunt/2
-      Y[j,j]=Y[i,i]+yij+yshunt/2
       #---------diagonal------------
-   
+      Y[i,i]=Y[i,i]+yij+yshunt/2
+      Y[j,j]=Y[j,j]+yij+yshunt/2
+      #---------diagonal------------
+
    #------END: Finner 2x2 matrisen på alle linjene-----
-   
+
    #------Start: Finner 2x2 matrisen på alle trafoene-----
-   for k in grid.trafo:  
+   for k in grid.trafo:
       if k.Type=='tap':
          a=1/k.ratio #alle ratioene er <1, så lavest spenning er i teller
          i=k.Frombus
@@ -36,13 +36,13 @@ def cutsem(grid):
 
          if grid.bus[i].Vbase>=grid.bus[j].Vbase:
             #---------ikke diagonal-------
-            Y[i,j]= Y[i,j]+(-1*yij/a)   
+            Y[i,j]= Y[i,j]+(-1*yij/a)
             Y[j,i]=Y[j,i]+(-1*yij/a)
             #---------ikke diagonal-------
 
-            #---------diagonal------------          
+            #---------diagonal------------
             Y[i,i]=Y[i,i]+yij/a**2
-            Y[j,j]=Y[i,i]+yij
+            Y[j,j]=Y[j,j]+yij
             #---------diagonal------------
          else: #variablebytte på i og j
             q=i
@@ -50,21 +50,15 @@ def cutsem(grid):
             i=p
             j=q
             #---------ikke diagonal-------
-            Y[i,j]= -1*yij/a   
+            Y[i,j]=Y[i,j]+(-1*yij/a)
+            Y[j,i]=Y[j,i]+(-1*yij/a)
             #---------ikke diagonal-------
 
-            #---------diagonal------------          
+            #---------diagonal------------
             Y[i,i]=Y[i,i]+yij/a**2
-            Y[j,j]=Y[i,i]+yij
+            Y[j,j]=Y[j,j]+yij
             #---------diagonal------------
    #------Start: Finner 2x2 matrisen på alle trafoene-----
-      
-
-   return Y      
-            
-
-         
 
 
-
-
+   return Y
