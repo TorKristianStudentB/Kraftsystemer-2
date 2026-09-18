@@ -4,14 +4,15 @@ import numpy as np
 def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med busindeks=0 ref
    Y=grid.admittansmatrise() #la den her for at ting går fortere
 
-   
-
    #---------oppretter klasser PV og PQ for bussene--------------------
    def busclassifier():
       bus=[]
       for i in range(len(grid.bus)):
         if i == 0:
             bus.append("ref")
+            continue
+        if np.all(np.isclose(Y[i,:], 0)):   #bussen henger ikke sammen med noe -> hopp over den
+            bus.append("alene")
             continue
         PV=False
         for j in range(len(grid.gen)):
@@ -45,7 +46,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
 
    #-----------lastflytligningen for aktiv effekt---------------------
    def powerflowequationP(i,j):
-
+      
       V_i=np.abs(grid.bus[i].Volt)
       V_j=np.abs(grid.bus[j].Volt)
       Yij=np.abs(Y[i,j])
@@ -182,6 +183,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
    #---------------Lager jacobian matrisen, bruker busclassifier til å strukturere den----------------
 
 
+
    #----------------Bygger dP og Dq vektoren, også b vektoren i Ax=b---------------
    def calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled):
          deltaPQ=[]
@@ -216,34 +218,18 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
       ferdig=False
       solution=False
 
-      J=jacobian()
-
-      print("size:", size)
-
-      for i in range(len(grid.bus)):
-         if i >= len(grid.bus)-10:
-            print(
-                  "bus:", i,
-                  "type:", busPVPQ[i],
-                  "pos:", pos[i]
-            )
-
-      zero_rows = np.where(np.all(np.isclose(J, 0), axis=1))[0]
-      zero_cols = np.where(np.all(np.isclose(J, 0), axis=0))[0]
-
-      print("Nullrader:", zero_rows)
-      print("Nullkolonner:", zero_cols)
-
-      print("busPVPQ:", busPVPQ)
-      print("J:")
-      print(J)
-      print("shape:", J.shape)
-      print("rank:", np.linalg.matrix_rank(J))
-      print("det:", np.linalg.det(J))
-      print("deltaPQ:", deltaPQ)
-
-      while ferdig!=True:          
+      while ferdig!=True:
          deltaPQ=calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled)
+
+         #-------sjekker om vi har konvergert-------
+         error = np.max(np.abs(deltaPQ))
+         if error <= 1e-6:
+             solution=True
+             ferdig=True
+             break
+
+         #-------ny jacobian hver iterasjon-------
+         J=jacobian()
          deltax=np.linalg.solve(J,deltaPQ)
          k=0
          for j in range(len(grid.bus)):
@@ -254,11 +240,6 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
                grid.bus[j].Angle=grid.bus[j].Angle+deltax[k]
                grid.bus[j].Volt=grid.bus[j].Volt+deltax[k+1]
                k=k+2
-
-         error = np.max(np.abs(deltaPQ))
-         if error <= 1e-6:
-             solution=True
-             ferdig=True
 
          if i >= 50000:
              ferdig=True
@@ -271,7 +252,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
 
 
    #---------------Loader løsningen som et eget object under hovednettet-----------
-   grid.solution = Grid.Solution(
+   grid.solution = grid.__class__.Solution(
         volt        = [b.Volt for b in grid.bus],
         angle       = [b.Angle for b in grid.bus],
         iterasjoner = iterasjon,
