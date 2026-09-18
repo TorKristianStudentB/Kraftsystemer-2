@@ -202,28 +202,31 @@ def MakeGrid(df):
    genDF   = df["gen"]
    #---------Oppretter objektet grid og leser excel arket-------
 
+
+   #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
+   def konverter_til_PU():
+        Sbase = busDF["S_base [MVA] "].iloc[0]*10*3 # fordi MVA
+        Zbase = lineDF["Vbase"]**2 / Sbase        # per linje (Series)
+        lineDF["R"] = lineDF["R"] / Zbase
+        lineDF["X"] = lineDF["X"] / Zbase
+   konverter_til_PU()
+   #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
+
+   
    #---------Finner busser som står alene-----------------------
    def finn_elementer_alene():
-
-      # Alle busser som finnes i linjer
+      #--------------bruker union funkjsonen innebygd i python----------
       busser_i_line = set(lineDF["bus0"]).union(set(lineDF["bus1"]))
-
-      # Alle busser som finnes i transformatorer
       busser_i_trafo = set(trafoDF["bus0"]).union(set(trafoDF["bus1"]))
-
-      # Busser som ikke finnes i verken linje eller trafo
       busser_alene = []
-
+      #--------------bruker union funkjsonen innebygd i python----------
       for bus in busDF["bus_id"]:
          if bus not in busser_i_line and bus not in busser_i_trafo:
             busser_alene.append(int(bus))
-
       return busser_alene
-
+   #---------Finner busser som står alene-----------------------
    busser_alene = finn_elementer_alene()
 
-   print("Busser alene:", busser_alene)
-   #---------Finner busser som står alene-----------------------
 
    #---------------Leser globale verdier base-----------
    Sbase = float(busDF["S_base [MVA] "].iloc[0])
