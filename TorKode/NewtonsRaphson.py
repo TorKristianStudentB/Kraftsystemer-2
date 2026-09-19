@@ -46,7 +46,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
 
    #-----------lastflytligningen for aktiv effekt---------------------
    def powerflowequationP(i,j):
-      
+
       V_i=np.abs(grid.bus[i].Volt)
       V_j=np.abs(grid.bus[j].Volt)
       Yij=np.abs(Y[i,j])
@@ -183,7 +183,6 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
    #---------------Lager jacobian matrisen, bruker busclassifier til å strukturere den----------------
 
 
-
    #----------------Bygger dP og Dq vektoren, også b vektoren i Ax=b---------------
    def calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled):
          deltaPQ=[]
@@ -246,9 +245,30 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
              solution=False
          i=i+1 
 
-      return solution,i, deltaPQ
+      #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
+      # (definert UTENFOR while-loopen; 1j = imaginaerenhet; per-linje admittans)
+      def flow_in_line():
+         flow=[]
+         for l in range(len(grid.line)):
+            b0=grid.line[l].Frombus
+            b1=grid.line[l].Tobus
+            v0=np.abs(grid.bus[b0].Volt)*np.exp(1j*grid.bus[b0].Angle)
+            v1=np.abs(grid.bus[b1].Volt)*np.exp(1j*grid.bus[b1].Angle)
+            straum=(v0-v1)*grid.line[l].admittans()   # seriestroem fra b0 mot b1
+            flow.append(v0*np.conj(straum))           # effektflyt inn i linja fra b0
+         return np.array(flow)
+      #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
+
+
+
+
+
+
+              
+
+      return solution,i, deltaPQ, flow_in_line()
    #------------Løser systemet med NR----------------------------------------------
-   Konvergerte , iterasjon , deltaPQ=finalsolver(busPVPQ,P_scheduled, Q_scheduled)
+   Konvergerte , iterasjon , deltaPQ, flow_in_line = finalsolver(busPVPQ,P_scheduled, Q_scheduled)
 
 
    #---------------Loader løsningen som et eget object under hovednettet-----------
@@ -258,9 +278,9 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
         iterasjoner = iterasjon,
         mismatch    = deltaPQ,
         konvergerte = Konvergerte,
+        flow_in_line = flow_in_line
     )
    #---------------Loader løsningen som et eget object under hovednettet-----------
-
 
    return grid
    

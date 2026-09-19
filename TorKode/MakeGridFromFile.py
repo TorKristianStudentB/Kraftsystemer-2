@@ -73,12 +73,13 @@ class Grid:
 
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
    class solution:   
-      def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte):
+      def __init__(self, volt, angle, iterasjoner, mismatch, konvergerte,flow_in_line):
          self.volt = volt               
          self.angle = angle                
          self.iterasjoner = iterasjoner    
          self.mismatch = mismatch          
          self.konvergerte = konvergerte  
+         self.flow_in_line = flow_in_line
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
 
 
@@ -209,10 +210,17 @@ def MakeGrid(df):
         Zbase = lineDF["Vbase"]**2 / Sbase        # per linje (Series)
         lineDF["R"] = lineDF["R"] / Zbase
         lineDF["X"] = lineDF["X"] / Zbase
+        busDF["P_gen"] = busDF["P_gen"] / Sbase
+        busDF["Q_gen"] = busDF["Q_gen"] / Sbase
+        busDF["P_load"] = busDF["P_load"] / Sbase
+        busDF["Q_load"] = busDF["Q_load"] / Sbase
+        genDF["Pmax"] = genDF["Pmax"] / Sbase
+        genDF["Qmax"] = genDF["Pmax"] / Sbase
+        genDF["Pmax"] = genDF["Pmax"] / Sbase
    konverter_til_PU()
    #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
 
-   
+
    #---------Finner busser som står alene-----------------------
    def finn_elementer_alene():
       #--------------bruker union funkjsonen innebygd i python----------
@@ -290,8 +298,8 @@ def MakeGrid(df):
             P_max     = int(genDF["Pmax"].iloc[i]),
             name      = str(genDF["name"].iloc[i]),
             bus       = float(genDF["bus"].iloc[i]),
-            Q_max     = float(genDF["Qmax(test)"].iloc[i]),#Få tak i PQ diagrammet
-            Q_min     = float(genDF["Qmin(test)"].iloc[i]),#Få tak i PQ diagrammet
+            Q_max     = float(genDF["Qmax"].iloc[i]),#Få tak i PQ diagrammet
+            Q_min     = float(genDF["Qmin"].iloc[i]),#Få tak i PQ diagrammet
          )
          grid.gen.append(b)
    #--------------oppretter generator data fra excel arket---
