@@ -7,13 +7,18 @@ def cutsem(grid):
    Y = np.zeros((N, N), dtype=complex)
    #----initaliserer admittansmatrisen----
 
+   #--------konverter til kodens egen identifikasjonsummer som er overens med dimensjonen-----
+   def konverter_identifikasjonummer(busnr):
+      i = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == busnr)         
+      return i
+   #--------konverter til kodens egen identifikasjonsummer som er overens med dimensjonen-----
+
    #------Start: Finner 2x2 matrisen på alle linjene-----
    for l in (grid.line):
-      i=l.Frombus
-      j=l.Tobus
+      i=konverter_identifikasjonummer(l.Frombus)
+      j=konverter_identifikasjonummer(l.Tobus)
       yij=l.admittans()
       yshunt=complex(0,l.B)
-
       #---------ikke diagonal-------
       Y[i,j]=Y[i,j]+(-1*yij)
       Y[j,i]=Y[j,i]+ (-1*yij)
@@ -30,8 +35,8 @@ def cutsem(grid):
    for k in grid.trafo:
       if k.Type=='tap':
          a=1/k.ratio #alle ratioene er <1, så lavest spenning er i teller
-         i=k.Frombus
-         j=k.Tobus
+         i=konverter_identifikasjonummer(k.Frombus)
+         j=konverter_identifikasjonummer(k.Tobus)
          yij=k.admittans()
 
          if grid.bus[i].Vbase>=grid.bus[j].Vbase:

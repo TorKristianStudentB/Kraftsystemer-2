@@ -10,8 +10,8 @@ import numpy as np
 #--------------------Hente filstien til megselv, må øke til mer--------
 current_path = os.getcwd()
 current_path=Path(current_path)
-KodePath=current_path
-KodePath=KodePath
+KodePath=current_path.parent 
+KodePath=KodePath / "Grid"
 sys.path.append(str(KodePath))
 #--------------------Hente filstien til megselv, må øke til mer--------
 
@@ -95,7 +95,7 @@ class Grid:
       Bidz : str
       Vbase : float 
 
-      def __init__(self, busNumber,name,Volt,Angle,P_gen,Q_gen,P_load,Q_load,bidz,Vbase,V_max,V_min,eic_code):
+      def __init__(self, busNumber,name,Volt,Angle,P_gen,Q_gen,P_load,Q_load,bidz,Vbase,V_max,V_min,eic_code,kodens_identifikasjonssystem):
         self.busNumber = busNumber
         self.Name = name
         self.Volt = Volt
@@ -109,6 +109,7 @@ class Grid:
         self.V_max = V_max
         self.V_min = V_min
         self.eic_code = eic_code
+        self.kodens_identifikasjonssystem = kodens_identifikasjonssystem
 
 
 #----------bus end------------------------
@@ -191,37 +192,42 @@ class Grid:
 #---------Start: Funskjon som fyller inn i objektet grid fra excel arket n490--------
 def MakeGrid(df):
 
-   #---------Oppretter objektet grid og leser excel arket-------
-   grid = Grid("Grid")
-   busDF   = df["bus"]
-   lineDF  = df["line"]
-   trafoDF = df["trafo"]
-   genDF   = df["gen"]
-   linkDF  = df["link"] if "link" in df else None   # lenke-fanen er valgfri
-   #---------Oppretter objektet grid og leser excel arket-------
+
+   #---------Leser excel arket og bruker pandas DF-------
+   def lese_excel_arket():
+      grid = Grid("Grid")
+      busDF   = df["bus"]
+      lineDF  = df["line"]
+      trafoDF = df["trafo"]
+      genDF   = df["gen"]
+      linkDF  = df["link"] if "link" in df else None   # lenke-fanen er valgfri
+      return grid, busDF, lineDF, trafoDF, genDF, linkDF
+   grid, busDF, lineDF, trafoDF, genDF, linkDF = lese_excel_arket()
+   #---------Leser excel arket og bruker pandas DF-------
 
 
    #----------Sjekker linkene og setter effekten på P-load =P_load-Pinj, trenger derfor ikke lenkene i nettmodellen-------
    def link():
-       if linkDF is None or "Pinj" not in linkDF.columns:   # ingen lenker aa injisere
-           return
-       Nordics=["NO1","NO2","NO3","NO4","NO5","SE1","SE2","SE3","SE4","FI","DK2"]
-       for i in range(len(linkDF)):
-           if linkDF["area0"].iloc[i] in Nordics and linkDF["area1"].iloc[i] in Nordics:
-              bus0=linkDF["bus0"].iloc[i]
-              bus1=linkDF["bus1"].iloc[i]
-              Pinj=linkDF["Pinj"].iloc[i]
-              busDF["P_load"].iloc[bus0]=busDF["P_load"].iloc[bus0] - Pinj
-              busDF["P_load"].iloc[bus1]=busDF["P_load"].iloc[bus1] + Pinj
-           else:
-               if linkDF["area0"].iloc[i] in Nordics:
-                    bus0=linkDF["bus0"].iloc[i]
-                    Pinj=linkDF["Pinj"].iloc[i]
-                    busDF["P_load"].iloc[bus0]=busDF["P_load"].iloc[bus0] - Pinj
-               else:
-                   bus1=linkDF["bus1"].iloc[i]
-                   Pinj=linkDF["Pinj"].iloc[i]
-                   busDF["P_load"].iloc[bus1]=busDF["P_load"].iloc[bus1] - Pinj
+      if linkDF is not None:
+         if linkDF is None or "Pinj" not in linkDF.columns:   # ingen lenker aa injisere
+            return
+         Nordics=["NO1","NO2","NO3","NO4","NO5","SE1","SE2","SE3","SE4","FI","DK2"]
+         for i in range(len(linkDF)):
+            if linkDF["area0"].iloc[i] in Nordics and linkDF["area1"].iloc[i] in Nordics:
+               bus0=linkDF["bus0"].iloc[i]
+               bus1=linkDF["bus1"].iloc[i]
+               Pinj=linkDF["Pinj"].iloc[i]
+               busDF["P_load"].iloc[bus0]=busDF["P_load"].iloc[bus0] - Pinj
+               busDF["P_load"].iloc[bus1]=busDF["P_load"].iloc[bus1] + Pinj
+            else:
+                  if linkDF["area0"].iloc[i] in Nordics:
+                     bus0=linkDF["bus0"].iloc[i]
+                     Pinj=linkDF["Pinj"].iloc[i]
+                     busDF["P_load"].iloc[bus0]=busDF["P_load"].iloc[bus0] - Pinj
+                  else:
+                     bus1=linkDF["bus1"].iloc[i]
+                     Pinj=linkDF["Pinj"].iloc[i]
+                     busDF["P_load"].iloc[bus1]=busDF["P_load"].iloc[bus1] - Pinj
    link()
    #----------Sjekker linkene og setter effekten på P-load =P_load-Pinj, trenger derfor ikke lenkene i nettmodellen-------
        
@@ -244,6 +250,7 @@ def MakeGrid(df):
       return Q_max,Q_min,V_max,V_min
    Q_max,Q_min,V_max,V_min=betingelser_for_Q_og_V()
    #----------Sjekker om det er Q og V begrensinger i excelarket-------------
+
 
    #--------------Sjekker om excelarket har eic koder-----------------------
    def eickode():
@@ -283,6 +290,7 @@ def MakeGrid(df):
    konverter_til_PU()
    #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
 
+
    #---------Finner busser som står alene-----------------------
    def finn_elementer_alene():
 
@@ -297,89 +305,95 @@ def MakeGrid(df):
    #---------Finner busser som står alene-----------------------
 
 
-   #---------------Leser globale verdier base-----------
-   Sbase = float(busDF["S_base [MVA] "].iloc[0])
-   Vbase = float(busDF["Vbase"].iloc[0])
-   grid.Base = Grid.BaseValues(Sbase, Vbase)
-   #---------------Leser globale verdier base-----------
 
-
-   #--------------oppretter bus fra excel arket----------
-   for i in range(len(busDF)):
-      b = Grid.bus(
-         busNumber = int(busDF["bus_id"].iloc[i]),
-         name      = str(busDF["name"].iloc[i]),
-         Volt      = float(busDF["V [P.U]"].iloc[i]),
-         Angle     = float(busDF["Angle [rad]"].iloc[i]),
-         P_gen     = float(busDF["P_gen"].iloc[i]),
-         Q_gen     = float(busDF["Q_gen"].iloc[i]),
-         P_load    = float(busDF["P_load"].iloc[i]),
-         Q_load    = float(busDF["Q_load"].iloc[i]),
-         bidz      = str(busDF["bidz"].iloc[i]),
-         Vbase     = float(busDF["Vbase"].iloc[i]),
-         V_max = float(busDF["Vmax"].iloc[i]) if V_max else None,
-         V_min = float(busDF["Vmin"].iloc[i]) if V_min else None,
-         eic_code = str(busDF["eic code"].iloc[i]) if eic_code_bus else None,
-      )
-      grid.bus.append(b)
-
-   #--------------oppretter bus fra excel arket----------
-
+   #---------Sette verdier inn i grid objektet over-------------
+   def Legge_verdier_i_objektet():
+         
    
-   #--------------oppretter linjer fra excel arket----------
-   for i in range(len(lineDF)):
-
-      b = Grid.line(
-         lineNumber = int(lineDF["line_id"].iloc[i]),
-         Name       = str(lineDF["name"].iloc[i]),
-         R          = float(lineDF["R"].iloc[i]),
-         X          = float(lineDF["X"].iloc[i]),
-         B          = float(lineDF["B"].iloc[i]),
-         Frombus    = int(lineDF["bus0"].iloc[i]),
-         Tobus      = int(lineDF["bus1"].iloc[i]),
-         lenght     = float(lineDF["length"].iloc[i]),
-         eic_code = str(lineDF["eic code"].iloc[i]) if eic_code_line else None,
-      )
-      grid.line.append(b)
-   #--------------oppretter linjer fra excel arket----------
-
-   #--------------oppretter Trafoer fra excel arket----------
-   for i in range(len(trafoDF)):
-      tr = Grid.trafo(
-         name    = str(trafoDF["name"].iloc[i]),
-         type    = "tap",
-         ratio   = float(trafoDF["ratio"].iloc[i]),
-         Frombus = int(trafoDF["bus0"].iloc[i]),
-         Tobus   = int(trafoDF["bus1"].iloc[i]),
-         R       = float(trafoDF["R"].iloc[i]),
-         X       = float(trafoDF["X"].iloc[i]),
-         eic_code = str(trafoDF["eic code"].iloc[i]) if eic_code_trafo else None,
-      )
-      grid.trafo.append(tr)
-   #--------------oppretter Trafoer fra excel arket----------
+         #---------------Leser globale verdier base-----------
+         Sbase = float(busDF["S_base [MVA] "].iloc[0])
+         Vbase = float(busDF["Vbase"].iloc[0])
+         grid.Base = Grid.BaseValues(Sbase, Vbase)
+         #---------------Leser globale verdier base-----------
 
 
-   #--------------oppretter generator data fra excel arket---
-   for i in range(len(genDF)):
-         b = Grid.gen(
-            P_max     = int(genDF["Pmax"].iloc[i]),
-            name      = str(genDF["name"].iloc[i]),
-            bus       = float(genDF["bus"].iloc[i]),
-            Q_max = float(genDF["Qmax"].iloc[i]) if Q_max else None,
-            Q_min = float(genDF["Qmin"].iloc[i]) if Q_min else None,
-            eic_code = str(genDF["eic code"].iloc[i]) if eic_code_gen else None,
-         )
-         grid.gen.append(b)
-   #--------------oppretter generator data fra excel arket---
+         #--------------oppretter bus fra excel arket----------
+         for i in range(len(busDF)):
+            b = Grid.bus(
+               busNumber = int(busDF["bus_id"].iloc[i]),
+               name      = str(busDF["name"].iloc[i]),
+               Volt      = float(busDF["V [P.U]"].iloc[i]),
+               Angle     = float(busDF["Angle [rad]"].iloc[i]),
+               P_gen     = float(busDF["P_gen"].iloc[i]),
+               Q_gen     = float(busDF["Q_gen"].iloc[i]),
+               P_load    = float(busDF["P_load"].iloc[i]),
+               Q_load    = float(busDF["Q_load"].iloc[i]),
+               bidz      = str(busDF["bidz"].iloc[i]),
+               Vbase     = float(busDF["Vbase"].iloc[i]),
+               V_max = float(busDF["Vmax"].iloc[i]) if V_max else None,
+               V_min = float(busDF["Vmin"].iloc[i]) if V_min else None,
+               eic_code = str(busDF["eic code"].iloc[i]) if eic_code_bus else None,
+               kodens_identifikasjonssystem = i,
+            )
+            grid.bus.append(b)
 
-   
+         #--------------oppretter bus fra excel arket----------
+
+         
+         #--------------oppretter linjer fra excel arket----------
+         for i in range(len(lineDF)):
+
+            b = Grid.line(
+               lineNumber = int(lineDF["line_id"].iloc[i]),
+               Name       = str(lineDF["name"].iloc[i]),
+               R          = float(lineDF["R"].iloc[i]),
+               X          = float(lineDF["X"].iloc[i]),
+               B          = float(lineDF["B"].iloc[i]),
+               Frombus    = int(lineDF["bus0"].iloc[i]),
+               Tobus      = int(lineDF["bus1"].iloc[i]),
+               lenght     = float(lineDF["length"].iloc[i]),
+               eic_code = str(lineDF["eic code"].iloc[i]) if eic_code_line else None,
+            )
+            grid.line.append(b)
+         #--------------oppretter linjer fra excel arket----------
+
+         #--------------oppretter Trafoer fra excel arket----------
+         for i in range(len(trafoDF)):
+            tr = Grid.trafo(
+               name    = str(trafoDF["name"].iloc[i]),
+               type    = "tap",
+               ratio   = float(trafoDF["ratio"].iloc[i]),
+               Frombus = int(trafoDF["bus0"].iloc[i]),
+               Tobus   = int(trafoDF["bus1"].iloc[i]),
+               R       = float(trafoDF["R"].iloc[i]),
+               X       = float(trafoDF["X"].iloc[i]),
+               eic_code = str(trafoDF["eic code"].iloc[i]) if eic_code_trafo else None,
+            )
+            grid.trafo.append(tr)
+         #--------------oppretter Trafoer fra excel arket----------
+
+
+         #--------------oppretter generator data fra excel arket---
+         for i in range(len(genDF)):
+               b = Grid.gen(
+                  P_max     = int(genDF["Pmax"].iloc[i]),
+                  name      = str(genDF["name"].iloc[i]),
+                  bus       = float(genDF["bus"].iloc[i]),
+                  Q_max = float(genDF["Qmax"].iloc[i]) if Q_max else None,
+                  Q_min = float(genDF["Qmin"].iloc[i]) if Q_min else None,
+                  eic_code = str(genDF["eic code"].iloc[i]) if eic_code_gen else None,
+               )
+               grid.gen.append(b)
+         #--------------oppretter generator data fra excel arket---
+   Legge_verdier_i_objektet()
+   #---------Sette verdier inn i grid objektet over-------------
+
+         
    return grid
-
 #---------END: Funskjon som fyller inn i objektet grid fra excel arket n490--------
 
 
 #----------Running---------------
 if __name__ == "__main__":
-   df = pd.read_excel(r"C:\Users\Eier\OneDrive\Boiege\Boiege\MainGrid.xlsx", sheet_name=None)
+   df = pd.read_excel(r"C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Grid\test_trøndelagsnettet.xlsx", sheet_name=None)
    grid = MakeGrid(df)
-   
