@@ -2,3 +2,4 @@ Dimensjonen på jacobian ble feil fordi jeg ikke sjekket om bussene var en del a
 
 Dimensjon feilen viste seg å være hardere enn først antatt
 
+Det var kronglete hvis kunden har busnr 134, men så er det på rad 7.
