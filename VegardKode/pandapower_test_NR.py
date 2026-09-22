@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXCEL_FILE = (
     PROJECT_ROOT
     / "Grid"
-    / "Nordic490_komplett.xlsx"
+    / "test_trøndelagsnettet.xlsx"
 )
 
 # VIKTIG!
