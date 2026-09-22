@@ -12,7 +12,7 @@ Objektstruktur
    │
    ├── .bus                  -> liste med bus-objekter
    │      └── [busindeks]
-   │           ├── .busNumber     -> int,   busNumber (OBS: liten n = tallet)
+   │           ├── .busNumber     -> int,   bus-id / bussnummeret
    │           ├── .Name     -> str,   trafostasjon-navn (OBS: stor N = navnet)
    │           ├── .Volt     -> float, spenning [p.u.]
    │           ├── .Angle    -> float, vinkel [rad]
@@ -39,7 +39,7 @@ Objektstruktur
    │      └── [trafoindeks]
    │           ├── .Name         -> str
    │           ├── .Type         -> str  ("tap")
-   │           ├── .Ratio        -> float ("tror ikke denne stemmer")
+   │           ├── .ratio        -> float ("tror ikke denne stemmer")
    │           ├── .Frombus      -> int
    │           ├── .Tobus        -> int
    │           ├── .R            -> float
@@ -54,9 +54,16 @@ Objektstruktur
    │           ├── .Q_max        -> float, Qmax (test)
    │           └── .Q_min        -> float, Qmin (test)
    │
+   ├── .solution                  -> [] til nettet er løst, ellers Solution-objekt
+   │      ├── .volt               -> liste, konvergerte spenninger [p.u.]
+   │      ├── .angle              -> liste, konvergerte vinkler [rad]
+   │      ├── .iterasjoner        -> int,   antall NR-iterasjoner
+   │      ├── .mismatch           -> siste dP/dQ-vektor (deltaPQ)
+   │      └── .konvergerte        -> bool,  True hvis løsningen konvergerte
+   │
    ├── .thevenin(bus1, bus2)      -> Thevenin-impedans mellom to busser
    └── .admittansmatrise()        -> Y-buss-matrise (cutsem)
-   
+
 
 
 ------------------------------------------------------------------------------
@@ -90,7 +97,7 @@ grid.bus[-1]                # siste buss
 grid.bus[2]                 # tredje buss
 
 # Attributter for én buss:
-grid.bus[0].name            # busNumber (tallet)
+grid.bus[0].busNumber       # bus-id (tallet)
 grid.bus[0].Name            # trafostasjon-navn
 grid.bus[0].Volt            # spenning [p.u.]
 grid.bus[0].Angle           # vinkel [rad]
@@ -104,7 +111,7 @@ vars(grid.bus[0])           # alt om buss 0 som dict
 
 # Gå gjennom alle busser:
 for b in grid.bus:
-    print(b.name, b.Volt, b.Angle, b.P_gen, b.P_load)
+    print(b.busNumber, b.Volt, b.Angle, b.P_gen, b.P_load)
 
 # Skriv ut alt for alle busser:
 for b in grid.bus:
@@ -144,7 +151,7 @@ grid.trafo[0]               # første trafo
 # Attributter for én trafo:
 grid.trafo[0].Name
 grid.trafo[0].Type          # "tap"
-grid.trafo[0].Ratio
+grid.trafo[0].ratio
 grid.trafo[0].Frombus
 grid.trafo[0].Tobus
 grid.trafo[0].R
@@ -154,7 +161,7 @@ vars(grid.trafo[0])         # alt om trafo 0 som dict
 
 # Gå gjennom alle trafoer:
 for t in grid.trafo:
-    print(t.Name, t.Frombus, "->", t.Tobus, "ratio=", t.Ratio)
+    print(t.Name, t.Frombus, "->", t.Tobus, "ratio=", t.ratio)
 
 
 ------------------------------------------------------------------------------
@@ -180,19 +187,19 @@ for g in grid.gen:
  7) NYTTIGE ONELINERS (søk, filtrering, oversikt)
 ------------------------------------------------------------------------------
 # Alle bussnumre:
-[b.name for b in grid.bus]
+[b.busNumber for b in grid.bus]
 
 # Alle spenninger:
 [b.Volt for b in grid.bus]
 
 # Finn en bestemt buss (f.eks. buss nr 3):
-next(b for b in grid.bus if b.name == 3)
+next(b for b in grid.bus if b.busNumber == 3)
 
 # Alle busser med generering (P_gen > 0):
-[b.name for b in grid.bus if b.P_gen > 0]
+[b.busNumber for b in grid.bus if b.P_gen > 0]
 
 # Alle busser med last (P_load > 0):
-[b.name for b in grid.bus if b.P_load > 0]
+[b.busNumber for b in grid.bus if b.P_load > 0]
 
 # Alle linjer koblet til buss 1:
 [l.Name for l in grid.line if l.Frombus == 1 or l.Tobus == 1]
@@ -243,4 +250,21 @@ df["trafo"].iloc[0]         # første traforad
 df["gen"].iloc[0]           # første generatorrad
 df["bus"].columns           # kolonnenavn
 df["bus"].head()            # de første radene
+
+
+------------------------------------------------------------------------------
+ 10) LASTFLYT / LØSNING (Newton-Raphson)
+------------------------------------------------------------------------------
+grid.solution               # [] så lenge nettet ikke er løst
+grid.loadflowsolutionNR()   # løser lastflyt på en KOPI, returnerer løst nett
+                            # (originalen 'grid' forblir urørt)
+
+# Fang det løste nettet og les løsningen:
+løst = grid.loadflowsolutionNR()
+løst.solution.volt          # konvergerte spenninger [p.u.]
+løst.solution.angle         # konvergerte vinkler [rad]
+løst.solution.iterasjoner   # antall NR-iterasjoner
+løst.solution.mismatch      # siste dP/dQ-vektor
+løst.solution.konvergerte   # True hvis den konvergerte
+vars(løst.solution)         # hele løsningen som dict
 ==============================================================================

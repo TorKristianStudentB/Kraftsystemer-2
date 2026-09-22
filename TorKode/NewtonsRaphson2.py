@@ -249,9 +249,11 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
       # (definert UTENFOR while-loopen; 1j = imaginaerenhet; per-linje admittans)
       def flow_in_line():
          flow=[]
-         for l in range(len(grid.line)):
+         for l in range(len(grid.line)): 
             b0=grid.line[l].Frombus
             b1=grid.line[l].Tobus
+            b0 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b0)
+            b1 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b1)
             v0=np.abs(grid.bus[b0].Volt)*np.exp(1j*grid.bus[b0].Angle)
             v1=np.abs(grid.bus[b1].Volt)*np.exp(1j*grid.bus[b1].Angle)
             straum=(v0-v1)*grid.line[l].admittans()   # seriestroem fra b0 mot b1
