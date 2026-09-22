@@ -1,0 +1,14 @@
+git add .
+
+git commit -m"her skriver du hva som helst"
+
+git push
+
+//
+
+git pull
+
+git switch Tor
+
+hei
+
