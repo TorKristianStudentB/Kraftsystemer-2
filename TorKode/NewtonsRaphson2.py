@@ -3,6 +3,8 @@ import numpy as np
 #----------------------------Her er Newtons Raphson metoden--------------------------------------------------
 def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med busindeks=0 ref
    Y=grid.admittansmatrise() #la den her for at ting går fortere
+   forste_gang = True
+
 
    #---------oppretter klasser PV og PQ for bussene--------------------
    def busclassifier():
@@ -29,7 +31,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
 
 
    #-----------Finner dimenjsonen på ax=b systemet som løses med NR---
-   def dimensjon_of_system():
+   def dimensjon_of_system(busPVPQ):
       pos = []
       size = 0
       for i in range(len(grid.bus)):
@@ -41,7 +43,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
                pos.append(None)   # slack / referansebus
       return size, pos
    #-----------Finner dimenjsonen på ax=b systemet som løses med NR--- 
-   size,pos=dimensjon_of_system()
+   size,pos=dimensjon_of_system(busPVPQ)
 
 
    #-----------lastflytligningen for aktiv effekt---------------------
@@ -70,24 +72,29 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
 
 
    #-------------Løser P=Pgen-Pload og Q=Qgen-Qload for gridet------------------------
-   def power_scheduled(busPVPQ):
-      P_scheduled=[]
-      Q_scheduled=[]
-      
-      for i in range(len(grid.bus)):
-            
-            P_mid=grid.bus[i].P_gen-grid.bus[i].P_load
-            P_scheduled.append(P_mid)
-            Q_mid=grid.bus[i].Q_gen-grid.bus[i].Q_load
-            Q_scheduled.append(Q_mid)
+   def power_scheduled(busPVPQ, minmax_ny_utregning):
+    nonlocal forste_gang
+    P_scheduled = []
+    Q_scheduled = []
+    for i in range(len(grid.bus)):
 
-      return np.array(P_scheduled), np.array(Q_scheduled)
+        P_mid = grid.bus[i].P_gen - grid.bus[i].P_load
+        P_scheduled.append(P_mid)
+
+        if not forste_gang and minmax_ny_utregning[1] == i:
+            Q_scheduled.append(minmax_ny_utregning[2])
+        else:
+            Q_mid = grid.bus[i].Q_gen - grid.bus[i].Q_load
+            Q_scheduled.append(Q_mid)
+    forste_gang = False
+
+    return np.array(P_scheduled), np.array(Q_scheduled)
    #-------------Løser P=Pgen-Pload og Q=Qgen-Qload for gridet------------------------
-   P_scheduled, Q_scheduled=power_scheduled(busPVPQ)  
+   P_scheduled, Q_scheduled=power_scheduled(busPVPQ,False)  
 
    
    #---------------Lager jacobian matrisen, bruker busclassifier til å strukturere den----------------
-   def jacobian():
+   def jacobian(busPVPQ):
     Y = grid.admittansmatrise()
     n = len(grid.bus)
 
@@ -150,7 +157,7 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
     #-----------------bygge jacobian matrisen utifra funksjonene over----------
     # posisjon (rad/kolonne) for hver bus: PV -> 1 plass, PQ -> 2 plasser, slack -> ingen
     
-    size, pos = dimensjon_of_system()
+    size, pos = dimensjon_of_system(busPVPQ)
 
     J = np.zeros((size, size))
     
@@ -186,6 +193,11 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
    #----------------Bygger dP og Dq vektoren, også b vektoren i Ax=b---------------
    def calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled):
          deltaPQ=[]
+         is_Q_max_true=False
+         is_Q_min_true=False
+         list_place=None
+         P=[]
+         Q=[]
 
          #---------------løser de store utrykkkene for P og Q-----------------
          N=len(grid.bus)
@@ -203,74 +215,92 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
                   Q_inwork=Q_inwork+powerflowequationQ(i,j)
                deltaPQ.append(P_scheduled[i]-P_inwork)
                deltaPQ.append(Q_scheduled[i]-Q_inwork)
+               
+               
+               #------gir n-1 svar fordi ref ikke er med, men kan lett finnes ut av-----
+               P.append(P_inwork)
+               Q.append(Q_inwork)
+               #------gir n-1 svar fordi ref ikke er med, men kan lett finnes ut av-----
+
+               #-----------sjekker om generatorene på den bussen er over ytelse----------
+               for g in range(len(grid.gen)):
+                        if grid.gen[g].bus == grid.bus[i].busNumber:
+                            is_Q_max_true=grid.gen[g].Q_max<=Q_inwork
+                            is_Q_min_true=grid.gen[g].Q_min>=Q_inwork
+                            if is_Q_max_true==True or is_Q_min_true==True:list_place=g
+               #-----------sjekker om generatorene på den bussen er over ytelse----------
+
          #---------------løser de store utrykkkene for P og Q-----------------
-
          deltaPQ = np.array(deltaPQ)
-         
-         return deltaPQ
-   #----------------Bygger dP og Dq vektoren, også b vektoren i Ax=b---------------   
+         return deltaPQ, is_Q_max_true, is_Q_min_true, list_place, P, Q
+   #----------------Bygger dP og Dq vektoren, også b vektoren i Ax=b---------------
 
 
-   #------------Løser systemet med NR----------------------------------------------
+ 
+    #------------Løser systemet med NR----------------------------------------------
    def finalsolver(busPVPQ,P_scheduled, Q_scheduled):
-      i=0
-      ferdig=False
-      solution=False
+        i=0
+        ferdig=False
+        solution=False
+        pv_to_pq_generators=[]
 
-      while ferdig!=True:
-         deltaPQ=calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled)
+        while ferdig!=True:
+            deltaPQ, is_Q_max_true, is_Q_min_true, t, power, qower = calculate_deltaPQ(busPVPQ,P_scheduled, Q_scheduled)
 
-         #-------sjekker om vi har konvergert-------
-         error = np.max(np.abs(deltaPQ))
-         if error <= 1e-6:
-             solution=True
-             ferdig=True
-             break
+            #-------------sjekker om jeg må endre fra PV til PQ-----------
+            if is_Q_max_true==True or is_Q_min_true==True:
+                if is_Q_max_true: Q=[ t , grid.gen[t].Qmax]
+                else: Q=[ t , grid.gen[t].Qmin]
+                busPVPQ[t]="PQ"
+                P_scheduled, Q_scheduled=power_scheduled(busPVPQ,[True, t , Q])
+                pv_to_pq_generators.append(grid.gen[t].name) 
+                
+                
+            #-------sjekker om vi har konvergert-------
+            error = np.max(np.abs(deltaPQ))
+            if error <= 1e-6:
+                solution=True
+                ferdig=True
+                break
 
-         #-------ny jacobian hver iterasjon-------
-         J=jacobian()
-         deltax=np.linalg.solve(J,deltaPQ)
-         k=0
-         for j in range(len(grid.bus)):
-            if busPVPQ[j]=="PV":
-               grid.bus[j].Angle=grid.bus[j].Angle+deltax[k]
-               k=k+1
-            elif busPVPQ[j]=="PQ":
-               grid.bus[j].Angle=grid.bus[j].Angle+deltax[k]
-               grid.bus[j].Volt=grid.bus[j].Volt+deltax[k+1]
-               k=k+2
+            #-------ny jacobian hver iterasjon-------
+            J=jacobian(busPVPQ)
+            deltax=np.linalg.solve(J,deltaPQ)
+            k=0
+            for j in range(len(grid.bus)):
+                if busPVPQ[j]=="PV":
+                    grid.bus[j].Angle=grid.bus[j].Angle+deltax[k]
+                    k=k+1
+                elif busPVPQ[j]=="PQ":
+                    grid.bus[j].Angle=grid.bus[j].Angle+deltax[k]
+                    grid.bus[j].Volt=grid.bus[j].Volt+deltax[k+1]
+                    k=k+2
 
-         if i >= 50000:
-             ferdig=True
-             solution=False
-         i=i+1 
+            if i >= 50000:
+                ferdig=True
+                solution=False
+            i=i+1 
 
-      #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
-      # (definert UTENFOR while-loopen; 1j = imaginaerenhet; per-linje admittans)
-      def flow_in_line():
-         flow=[]
-         for l in range(len(grid.line)): 
-            b0=grid.line[l].Frombus
-            b1=grid.line[l].Tobus
-            b0 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b0)
-            b1 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b1)
-            v0=np.abs(grid.bus[b0].Volt)*np.exp(1j*grid.bus[b0].Angle)
-            v1=np.abs(grid.bus[b1].Volt)*np.exp(1j*grid.bus[b1].Angle)
-            straum=(v0-v1)*grid.line[l].admittans()   # seriestroem fra b0 mot b1
-            flow.append(v0*np.conj(straum))           # effektflyt inn i linja fra b0
-         return np.array(flow)
-      #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
+        #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
+        # (definert UTENFOR while-loopen; 1j = imaginaerenhet; per-linje admittans)
+        def flow_in_line():
+            flow=[]
+            for l in range(len(grid.line)): 
+                b0=grid.line[l].Frombus
+                b1=grid.line[l].Tobus
+                b0 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b0)
+                b1 = next(bus.kodens_identifikasjonssystem for bus in grid.bus if bus.busNumber == b1)
+                v0=np.abs(grid.bus[b0].Volt)*np.exp(1j*grid.bus[b0].Angle)
+                v1=np.abs(grid.bus[b1].Volt)*np.exp(1j*grid.bus[b1].Angle)
+                straum=(v0-v1)*grid.line[l].admittans()   # seriestroem fra b0 mot b1
+                flow.append(v0*np.conj(straum))           # effektflyt inn i linja fra b0
+            return np.array(flow)
+        #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------                    
 
+        return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower
+    #------------Løser systemet med NR----------------------------------------------
+   Konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower = finalsolver(busPVPQ,P_scheduled, Q_scheduled)
 
-
-
-
-
-              
-
-      return solution,i, deltaPQ, flow_in_line()
-   #------------Løser systemet med NR----------------------------------------------
-   Konvergerte , iterasjon , deltaPQ, flow_in_line = finalsolver(busPVPQ,P_scheduled, Q_scheduled)
 
 
    #---------------Loader løsningen som et eget object under hovednettet-----------
@@ -280,7 +310,12 @@ def NewtonRaphson(grid): #Furuseth=busindeks=0 er ref, i andre nett er bus med b
         iterasjoner = iterasjon,
         mismatch    = deltaPQ,
         konvergerte = Konvergerte,
-        flow_in_line = flow_in_line
+        flow_in_line = flow_in_line,
+        pv_to_pq_generators = pv_to_pq_generators,
+        power=power,
+        qower=qower,
+
+
     )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 

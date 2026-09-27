@@ -16,7 +16,7 @@ sys.path.append(str(KodePath))
 #--------------------Hente filstien til megselv, må øke til mer--------
 
 #--------funksjonshenting---------
-from theveninZth import theveninZth
+from theveninZth2 import theveninZth
 from admittansmatrise import cutsem
 from NewtonsRaphson2 import NewtonRaphson
 #--------funksjonshenting---------
@@ -54,7 +54,9 @@ class Grid:
 
 
    def thevenin(self,bus1,bus2):
-      return theveninZth(self,bus1,bus2)
+      grid.loadflowsolutionNR()
+      Zth=theveninZth(self,bus1,bus2)
+      return f"Zth={Zth} og Vth={grid.bus[1].Volt-grid.bus[2].Volt}"
 
    def admittansmatrise(self):
       return cutsem(self)
@@ -64,13 +66,16 @@ class Grid:
 
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
    class Solution:
-      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte):
+      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower):
          self.volt = volt
          self.angle = angle
          self.iterasjoner = iterasjoner
          self.mismatch = mismatch
          self.konvergerte = konvergerte
          self.flow_in_line = flow_in_line
+         self.pv_to_pq_generators = pv_to_pq_generators
+         self.power = power
+         self.qower = qower
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
 
 
@@ -110,6 +115,14 @@ class Grid:
         self.V_min = V_min
         self.eic_code = eic_code
         self.kodens_identifikasjonssystem = kodens_identifikasjonssystem
+
+
+      def finne_bus_indeks(self, busNumber):
+            for bus in self.bus:
+               if bus.busNumber == busNumber:
+                     return bus.kodens_identifikasjonssystem
+            return None
+                           
 
 
 #----------bus end------------------------
@@ -395,5 +408,12 @@ def MakeGrid(df):
 
 #----------Running---------------
 if __name__ == "__main__":
-   df = pd.read_excel(r"C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Grid\test_trøndelagsnettet.xlsx", sheet_name=None)
+   df = pd.read_excel(r"C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Grid\Enkel_nett_teste_qmaxmin.xlsx", sheet_name=None)
    grid = MakeGrid(df)
+   grid.loadflowsolutionNR()
+   print(np.array(grid.solution.volt)*np.array([b.Vbase for b in grid.bus]))
+   print(grid.solution.pv_to_pq_generators)
+   print(np.array(grid.solution.qower)*grid.Base.Sbase)
+   print(np.array([b.Q_max for b in grid.gen]))
+   print(np.array([b.Q_min for b in grid.gen]))
+
