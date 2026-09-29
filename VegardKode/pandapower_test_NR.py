@@ -4,6 +4,21 @@ from pathlib import Path
 import numpy as np
 
 
+def is_unknown(value):
+    """True når en Excel-celle er tom/NaN og derfor skal tolkes som ukjent."""
+    return pd.isna(value)
+
+
+def require_known(value, column_name, bus_number):
+    """Krev at en størrelse som skal være kjent faktisk er fylt ut i Excel."""
+    if is_unknown(value):
+        raise ValueError(
+            f"Manglende verdi i '{column_name}' for bus {bus_number}. "
+            "Tom celle tolkes som ukjent, ikke som 0."
+        )
+    return float(value)
+
+
 #Denne koden henter inn et datasett fra en excelfil, forutsatt at den har de kolonnenavnene spesifisert i koden. Videre utfører den Newton Raphson med PandaSolver og lagrer den i en CSV-fil.
 
 # ==========================================================
@@ -15,7 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXCEL_FILE = (
     PROJECT_ROOT
     / "Grid"
-    / "test_trøndelagsnettet.xlsx"
+    / "test_trøndelagsnettet_ny.xlsx"
 )
 
 # VIKTIG!
@@ -94,7 +109,7 @@ def run_excel_with_pandapower(excel_file):
     print("\nLeser systembase...")
 
     sbase_values = (
-        bus_df["S_base [MVA]"]
+        bus_df["S_base [MVA] "]
         .dropna()
         .unique()
     )
@@ -161,8 +176,10 @@ def run_excel_with_pandapower(excel_file):
 
         bus_number = int(row["bus_id"])
 
-        p_load = float(row["P_load"])
-        q_load = float(row["Q_load"])
+        # P_load og Q_load er spesifiserte inputverdier.
+        # Hvis de er tomme, skal det ikke tolkes som 0.
+        p_load = require_known(row["P_load"], "P_load", bus_number)
+        q_load = require_known(row["Q_load"], "Q_load", bus_number)
 
         if p_load != 0 or q_load != 0:
 
@@ -184,49 +201,92 @@ def run_excel_with_pandapower(excel_file):
 
     print("\nOppretter slack og generatorer...")
 
-    slack_created = False
+    # --------------------------------------------------
+    # Velg slack-buss eksplisitt ut fra nettet
+    # --------------------------------------------------
+    # For dette datasettet brukes bus 108 (Nea trafostasjon):
+    # - 380 kV
+    # - stor produksjon
+    # - egnet som sterk referansebuss
+    SLACK_BUS_ID = 108
 
+    if SLACK_BUS_ID not in bus_map:
+        raise ValueError(
+            f"Slack-buss {SLACK_BUS_ID} finnes ikke i bus-tabellen."
+        )
+
+    slack_row = bus_df.loc[
+        bus_df["bus_id"] == SLACK_BUS_ID
+    ].iloc[0]
+
+    slack_vm_pu = float(slack_row["V [P.U]"])
+    slack_angle_rad = float(slack_row["Angle [rad]"])
+
+    pp.create_ext_grid(
+        net,
+        bus=bus_map[SLACK_BUS_ID],
+        vm_pu=slack_vm_pu,
+        va_degree=np.degrees(slack_angle_rad),
+        name=f"Slack bus {SLACK_BUS_ID}"
+    )
+
+    print("Slack-buss:", SLACK_BUS_ID)
+
+    # --------------------------------------------------
+    # Opprett øvrige generatorer
+    # --------------------------------------------------
     for _, row in bus_df.iterrows():
 
         bus_number = int(row["bus_id"])
 
-        p_gen = float(row["P_gen"])
-
-        if p_gen == 0:
+        if bus_number == SLACK_BUS_ID:
             continue
 
+        p_gen_raw = row["P_gen"]
+        q_gen_raw = row["Q_gen"]
+
+        # Excel-logikk:
+        #   0        = kjent fysisk null
+        #   tom/NaN  = ukjent verdi
+        # Dermed:
+        #   P_gen kjent + Q_gen tom  -> PV-buss (Q beregnes)
+        #   P_gen kjent + Q_gen kjent -> fast PQ-injeksjon
+        #   slack-buss                -> P_gen og Q_gen kan være tomme
+
+        # Ingen spesifisert produksjon på bussen
+        if is_unknown(p_gen_raw) or float(p_gen_raw) == 0:
+            continue
+
+        p_gen = float(p_gen_raw)
         vm_pu = float(row["V [P.U]"])
 
-        # Første generatorbuss blir foreløpig slack
-        if not slack_created:
-
-            angle_rad = float(row["Angle [rad]"])
-
-            pp.create_ext_grid(
-                net,
-                bus=bus_map[bus_number],
-                vm_pu=vm_pu,
-                va_degree=np.degrees(angle_rad),
-                name=f"Slack bus {bus_number}"
-            )
-
-            print("Slack-buss:", bus_number)
-
-            slack_created = True
-
-        # Resten blir PV-busser
-        else:
+        # Hvis Q_gen er tom/NaN, tolkes bussen som PV:
+        # P og V er spesifisert, Q beregnes av lastflyten.
+        if is_unknown(q_gen_raw):
 
             pp.create_gen(
                 net,
                 bus=bus_map[bus_number],
                 p_mw=p_gen,
                 vm_pu=vm_pu,
-                name=f"Generator bus {bus_number}"
+                name=f"PV generator bus {bus_number}"
+            )
+
+        # Hvis både P_gen og Q_gen er kjent, tolkes produksjonen
+        # som fast PQ-injeksjon.
+        else:
+
+            pp.create_sgen(
+                net,
+                bus=bus_map[bus_number],
+                p_mw=p_gen,
+                q_mvar=float(q_gen_raw),
+                name=f"PQ generator bus {bus_number}"
             )
 
     print("Generatorer ferdig opprettet")
     print("Antall PV-generatorer:", len(net.gen))
+    print("Antall PQ-generatorer:", len(net.sgen))
 
 
     # --------------------------------------------------
@@ -388,6 +448,26 @@ def run_excel_with_pandapower(excel_file):
     )
 
     print("Newton-Raphson ferdig")
+
+
+
+
+##Får linjeflyten
+
+    print("\nLINJER / IMPEDANSER:")
+    print(
+        net.res_impedance[
+            ["p_from_mw", "q_from_mvar", "p_to_mw", "q_to_mvar"]
+        ]
+    )
+
+    print("\nTRANSFORMATORER:")
+    print(
+        net.res_trafo[
+            ["p_hv_mw", "q_hv_mvar", "p_lv_mw", "q_lv_mvar"]
+        ]
+    )
+
 
 
     # --------------------------------------------------
