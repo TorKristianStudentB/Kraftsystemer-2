@@ -1,0 +1,25 @@
+(For å pushe)
+
+git add .
+
+git commit -m"her skriver du meldingen"
+
+git push
+
+
+(For å pull)
+
+git pull
+
+(For å merge)
+
+git merge branchname
+
+
+(For å bytte branch)
+
+git switch branchname
+
+(For å sjekke status)
+
+git status

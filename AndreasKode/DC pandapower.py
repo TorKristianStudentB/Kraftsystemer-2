@@ -3,10 +3,14 @@ import pandapower as pp
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path.cwd() / "TorKode"))
-import MakeGridFromFile as mgf
+from TorKode.MakeGridFromFile import Grid, MakeGrid, read_xlsx, FileName, FolderName
 
-grid =mgf.MakeGrid(mgf.df)
+
+if __name__ == "__main__":
+    df=read_xlsx(FolderName, FileName) #leser excelfilen
+    grid=MakeGrid(df)                  #oppretter nettet
+
+
 # definerer regionen som NO3 for å få trøndelagsområdet.
 region_buses = [b for b in grid.bus if b.bidz == "NO3"]
 region_bus_ids = [b.busNumber for b in region_buses]
@@ -16,7 +20,7 @@ region_trafos = [t for t in grid.trafo if t.Frombus in region_bus_ids and t.Tobu
 #Filtrerer ut verdier for å lage en pandapower-nettverk
 for b in region_buses:
     print(b.busNumber, b.Name, b.Vbase, "kV", "P_gen=", b.P_gen , "P_load=", b.P_load)
-    
+
 net = pp.create_empty_network(name="Nordic490 -NO3")
 
 bus_id_map = {}
@@ -42,8 +46,6 @@ for l in region_lines:
     )
 
 
-
-
 for t in region_trafos:
     hv_bus = next(b for b in region_buses if b.busNumber == t.Frombus)
     lv_bus = next(b for b in region_buses if b.busNumber == t.Tobus)
@@ -61,8 +63,9 @@ for t in region_trafos:
         i0_percent=0,
         name=t.Name,
     )
+
 # Setter den største generatoren som slack-bus
-slack = max(region_buses, key=lambda b: b.P_gen)
+slack = next(b for b in region_buses if b.busNumber == 30)
 pp.create_ext_grid(net, bus_id_map[slack.busNumber])
 
 pp.rundcpp(net)
@@ -70,5 +73,6 @@ pp.rundcpp(net)
 print(net.res_bus[["va_degree"]])
 print(net.res_line[["p_from_mw", "p_to_mw", "loading_percent"]])
                     
-                    
+                
+
                     
