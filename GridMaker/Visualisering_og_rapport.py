@@ -335,11 +335,61 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         return [(x1, y1), (x1, ym), (x2, ym), (x2, y2)]
 
 
+    def _tildel_pinner(grid, bus_pos, bar_w):
+        """Gi hver linje/transformator et lite sideveis avvik fra bussens
+        senter der den går ut. Uten dette ville flere loddrette forbindelser
+        fra samme buss startet i akkurat samme punkt og ligget oppå
+        hverandre helt til de knekker hver sin vei. Pinnene fordeles jevnt
+        langs samleskinnen, sortert etter hvilken kant forbindelsen går mot,
+        slik at de også unngår å krysse hverandre rett ved bussen."""
+
+        tilkoblinger = {}
+
+        for line in grid.line:
+            if line.Frombus in bus_pos and line.Tobus in bus_pos:
+                xa, xb = bus_pos[line.Frombus][0], bus_pos[line.Tobus][0]
+                tilkoblinger.setdefault(line.Frombus, []).append((("line", line.lineNumber, "A"), xb))
+                tilkoblinger.setdefault(line.Tobus, []).append((("line", line.lineNumber, "B"), xa))
+
+        for i, trafo in enumerate(grid.trafo):
+            if trafo.Frombus in bus_pos and trafo.Tobus in bus_pos:
+                xa, xb = bus_pos[trafo.Frombus][0], bus_pos[trafo.Tobus][0]
+                tilkoblinger.setdefault(trafo.Frombus, []).append((("trafo", i, "A"), xb))
+                tilkoblinger.setdefault(trafo.Tobus, []).append((("trafo", i, "B"), xa))
+
+        pin_x = {}
+
+        for liste in tilkoblinger.values():
+            n = len(liste)
+            if n <= 1:
+                for nokkel, _ in liste:
+                    pin_x[nokkel] = 0.0
+                continue
+
+            liste.sort(key=lambda t: t[1])
+            bredde_total = min(bar_w * 0.30 * (n - 1), bar_w * 0.9)
+            steg = bredde_total / (n - 1)
+            start = -bredde_total / 2
+
+            for i, (nokkel, _) in enumerate(liste):
+                pin_x[nokkel] = start + i * steg
+
+        return pin_x
+
+
     def _beregn_alle_baner(grid, bus_pos):
         """Beregn den (evt. knekkede) banen for hver linje og transformator på
         forhånd. Flere forbindelser som krysser det samme rad-mellomrommet får
-        hver sin vannrette 'kanal' fordelt mellom radene, slik at de ikke
-        havner oppå hverandre der de knekker."""
+        hver sin vannrette 'kanal' fordelt mellom radene, og flere forbindelser
+        fra samme buss får hver sin 'pinne' langs samleskinnen, slik at
+        loddrette linjer aldri ligger oppå hverandre."""
+
+        xs = [p[0] for p in bus_pos.values()]
+        ys = [p[1] for p in bus_pos.values()]
+        span = max(max(xs) - min(xs), max(ys) - min(ys)) or 1.0
+        bar_w = 0.16 * span
+
+        pin_x = _tildel_pinner(grid, bus_pos, bar_w)
 
         rader_data = []
         nokler = []
@@ -348,6 +398,8 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
             if line.Frombus in bus_pos and line.Tobus in bus_pos:
                 x1, y1 = bus_pos[line.Frombus]
                 x2, y2 = bus_pos[line.Tobus]
+                x1 += pin_x.get(("line", line.lineNumber, "A"), 0.0)
+                x2 += pin_x.get(("line", line.lineNumber, "B"), 0.0)
                 rader_data.append((x1, y1, x2, y2))
                 nokler.append(("line", line.lineNumber))
 
@@ -355,6 +407,8 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
             if trafo.Frombus in bus_pos and trafo.Tobus in bus_pos:
                 x1, y1 = bus_pos[trafo.Frombus]
                 x2, y2 = bus_pos[trafo.Tobus]
+                x1 += pin_x.get(("trafo", i, "A"), 0.0)
+                x2 += pin_x.get(("trafo", i, "B"), 0.0)
                 rader_data.append((x1, y1, x2, y2))
                 nokler.append(("trafo", i))
 
