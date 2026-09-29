@@ -1,11 +1,31 @@
 from GridMaker.Imports import np, plt, PdfPages, datetime,Rectangle,FancyBboxPatch,Circle,Line2D
 import networkx as nx
 import matplotlib.colors as mcolors
+import io
+import os
 
 
 
 #---------------------Lager rapporten----------------------------------------
-def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
+def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf", metode="NR"):
+
+    # ----------------------------------------------------------------
+    # Hver kjøring får sin egen undermappe i Rapport/, navngitt med
+    # tidspunkt + gridnavn + lastflytmetode (NR/DCPF/FDPF), slik at
+    # PDF-en og den interaktive HTML-filen fra samme kjøring havner
+    # samlet i én mappe i stedet for å overskrive forrige kjøring.
+    # ----------------------------------------------------------------
+    def _trygt_navn(tekst):
+        """Gjør en tekst trygg å bruke i et mappe-/filnavn på Windows."""
+        trygt = "".join(c if c not in '\\/:*?"<>|' else "_" for c in str(tekst))
+        trygt = trygt.strip(" .")
+        return trygt or "ukjent"
+
+    _tidsstempel = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    _undermappe = f"{_tidsstempel}_{_trygt_navn(grid.Name)}_{_trygt_navn(metode)}"
+    _mappe = os.path.join("Rapport", _undermappe)
+    os.makedirs(_mappe, exist_ok=True)
+    filnavn = os.path.join(_mappe, os.path.basename(filnavn))
 
     # Disse navnene fylles inn av Design_av_utsende() lenger ned (via
     # "nonlocal"), slik at resten av lag_rapport - og hjelpefunksjonene
@@ -16,7 +36,7 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
      INNHOLD_TOPP, INNHOLD_BUNN, FOT_LINJE_Y) = (None,) * 19
 
     (_ny_side, _kort_tekst, _sidehode, _sidefot, _side_med_innramming,
-     _seksjonstittel, _rad, _beregn_ramme, _velg_side_og_rute, _kpi_kort) = (None,) * 10
+     _seksjonstittel, _rad, _kpi_kort) = (None,) * 8
 
     #---------------lager rapport------------------------------
     def  Design_av_utsende():
@@ -24,7 +44,7 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         nonlocal GRABAKGRUNN, TEKST, DEMPET, LINJEGRA, TOTALT_SIDER, HODE_Y, HODE_H
         nonlocal INNHOLD_TOPP, INNHOLD_BUNN, FOT_LINJE_Y
         nonlocal _ny_side, _kort_tekst, _sidehode, _sidefot, _side_med_innramming
-        nonlocal _seksjonstittel, _rad, _beregn_ramme, _velg_side_og_rute, _kpi_kort
+        nonlocal _seksjonstittel, _rad, _kpi_kort
 
         # =======================================================================
         # DESIGN – FARGER, MÅL OG SMÅHJELPERE
@@ -45,7 +65,7 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         DEMPET = "#6B7684"
         LINJEGRA = "#D8DEE4"
 
-        TOTALT_SIDER = 5
+        TOTALT_SIDER = 3
 
         # Innholdsområdet er felles for alle sider (figur-fraksjon-koordinater)
         HODE_Y = 0.930
@@ -160,66 +180,6 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         def _rad(fig, x, y, etikett, verdi, farge=TEKST, storrelse=9.3):
             fig.text(x, y, etikett, fontsize=9.3, color=DEMPET)
             fig.text(x + 0.235, y, verdi, fontsize=storrelse, color=farge, fontweight="bold")
-
-
-        def _beregn_ramme(bus_pos, marg=0.15, topp_ekstra=0.12):
-            """Finn xlim/ylim for nettdiagrammet, med ekstra plass øverst til generatorsymboler."""
-
-            xs = [p[0] for p in bus_pos.values()]
-            ys = [p[1] for p in bus_pos.values()]
-
-            x_min, x_max = min(xs), max(xs)
-            y_min, y_max = min(ys), max(ys)
-
-            dx = (x_max - x_min) or 1.0
-            dy = (y_max - y_min) or 1.0
-
-            x_pad = dx * marg
-            y_pad = dy * marg
-            y_topp = dy * topp_ekstra
-
-            xlim = (x_min - x_pad, x_max + x_pad)
-            ylim = (y_min - y_pad, y_max + y_pad + y_topp)
-
-            return xlim, ylim, (xlim[1] - xlim[0]), (ylim[1] - ylim[0])
-
-
-        def _velg_side_og_rute(dx_tot, dy_tot):
-            """Velg A4-portrett eller A4-landskap for enlinjeskjemaet – hva som gir best
-            plassutnyttelse for nettets faktiske høyde/bredde-forhold – og gi tilbake
-            figurstørrelsen og aksens plassering. Akseforholdet holdes likt (1:1) i
-            begge tilfeller, slik at busser/transformatorsirkler ikke blir ovale."""
-
-            x0, bw = 0.07, 0.86
-            bh = INNHOLD_TOPP - INNHOLD_BUNN
-
-            def _fyll(side_bredde, side_hoyde):
-                bw_tomm = bw * side_bredde
-                bh_tomm = bh * side_hoyde
-                if dy_tot / dx_tot * bw_tomm <= bh_tomm:
-                    w_tomm = bw_tomm
-                    h_tomm = w_tomm * dy_tot / dx_tot
-                else:
-                    h_tomm = bh_tomm
-                    w_tomm = h_tomm * dx_tot / dy_tot
-                return w_tomm, h_tomm
-
-            beste = None
-            for side_bredde, side_hoyde in ((A4_BREDDE, A4_HOYDE), (A4_HOYDE, A4_BREDDE)):
-                w_tomm, h_tomm = _fyll(side_bredde, side_hoyde)
-                areal = w_tomm * h_tomm
-                if beste is None or areal > beste[0]:
-                    beste = (areal, side_bredde, side_hoyde, w_tomm, h_tomm)
-
-            _, side_bredde, side_hoyde, w_tomm, h_tomm = beste
-
-            w_frac = w_tomm / side_bredde
-            h_frac = h_tomm / side_hoyde
-
-            x = x0 + (bw - w_frac) / 2
-            y = INNHOLD_BUNN + (bh - h_frac) / 2
-
-            return side_bredde, side_hoyde, [x, y, w_frac, h_frac]
 
 
         def _kpi_kort(fig, x, y, w, h, etikett, verdi):
@@ -519,6 +479,9 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         gen_r = 0.040 * span
         stamme = 0.085 * span
 
+        # Én buss kan ha flere generatorer (grid.gen) – gen_busser er et sett
+        # av bussnumre, så uansett hvor mange generatorer som er koblet til
+        # samme buss tegnes det bare ett generatorsymbol der.
         for busnr in gen_busser:
             if busnr not in bus_pos:
                 continue
@@ -565,175 +528,35 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
     #---------Forklaring til enlinjeskjemaet---------------
 
 
-    #------------lager interaktivt (zoombart) enlinjeskjema for store nett---
-    def _lag_interaktiv_html(grid, V, angle_deg, bus_pos, gen_busser, html_navn):
-        """Lager en zoombar/pannbar HTML-versjon av enlinjeskjemaet, med en
-        bryter mellom skjematisk visning og spenningsheatmap. Brukes for
-        store nett der en statisk PDF-side blir uleselig."""
+    #------------bygger enlinjeskjema-figuren (matplotlib)------------------
+    def _bygg_enlinjeskjema_figur(grid, V, angle_deg, bus_pos, gen_busser, baner):
 
-        try:
-            import plotly.graph_objects as go
-        except ImportError:
-            print(f"Advarsel: fant ikke pakken «plotly» – hopper over interaktivt diagram ({html_navn}).")
-            return
+        xs = [p[0] for p in bus_pos.values()]
+        ys = [p[1] for p in bus_pos.values()]
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+        dx = (x_max - x_min) or 1.0
+        dy = (y_max - y_min) or 1.0
 
-        baner = _beregn_alle_baner(grid, bus_pos)
+        x_pad = dx * 0.30
+        y_pad = dy * 0.30
+        xlim = (x_min - x_pad, x_max + x_pad + dx * 0.34)   # plass til tekstboksene til høyre
+        ylim = (y_min - y_pad - dy * 0.18, y_max + y_pad)    # plass til generatorstammene under
 
-        linje_x, linje_y = [], []
-        for line in grid.line:
-            if line.Frombus not in bus_pos or line.Tobus not in bus_pos:
-                continue
-            bane = baner[("line", line.lineNumber)]
-            linje_x += [p[0] for p in bane] + [None]
-            linje_y += [p[1] for p in bane] + [None]
-
-        linje_trace = go.Scatter(
-            x=linje_x, y=linje_y, mode="lines",
-            line=dict(color=BLUE, width=1.4),
-            hoverinfo="skip", name="Linjer", showlegend=False,
-        )
-
-        trafo_x, trafo_y, trafo_hover = [], [], []
-        for i, trafo in enumerate(grid.trafo):
-            if trafo.Frombus not in bus_pos or trafo.Tobus not in bus_pos:
-                continue
-            xm, ym, _, _ = _midtpunkt_pa_bane(baner[("trafo", i)])
-            trafo_x.append(xm)
-            trafo_y.append(ym)
-            trafo_hover.append(
-                f"Transformator {trafo.Frombus}-{trafo.Tobus}<br>"
-                f"Omsetning: {trafo.ratio:.4g}:1<br>R={trafo.R:.4g} pu, X={trafo.X:.4g} pu"
-            )
-
-        trafo_trace = go.Scatter(
-            x=trafo_x, y=trafo_y, mode="markers",
-            marker=dict(symbol="circle-open", size=14, color="black", line=dict(width=2)),
-            hovertext=trafo_hover, hoverinfo="text", name="Transformatorer", showlegend=False,
-        )
-
-        gen_x, gen_y, gen_hover = [], [], []
-        gen_ved_bus = {b.busNumber: b for b in grid.bus}
-        for busnr in gen_busser:
-            if busnr not in bus_pos:
-                continue
-            x, y = bus_pos[busnr]
-            bus = gen_ved_bus[busnr]
-            gen_x.append(x)
-            gen_y.append(y)
-            gen_hover.append(f"Generator ved buss {busnr}<br>P_G={bus.P_gen:.4f} pu<br>Q_G={bus.Q_gen:.4f} pu")
-
-        gen_trace = go.Scatter(
-            x=gen_x, y=gen_y, mode="markers",
-            marker=dict(symbol="circle-open", size=20, color="black", line=dict(width=2.5)),
-            hovertext=gen_hover, hoverinfo="text", name="Generatorer", showlegend=False,
-        )
-
-        bus_x, bus_y, bus_v, bus_navn_liste, bus_hover = [], [], [], [], []
-        for i, bus in enumerate(grid.bus):
-            if bus.busNumber not in bus_pos:
-                continue
-            x, y = bus_pos[bus.busNumber]
-            bus_x.append(x)
-            bus_y.append(y)
-            bus_v.append(V[i])
-            bus_navn_liste.append(str(bus.busNumber))
-            bus_hover.append(
-                f"<b>Buss {bus.busNumber}</b> – {bus.Name}<br>"
-                f"V = {V[i]:.4f} pu<br>δ = {angle_deg[i]:.3f}°<br>"
-                f"P_gen = {bus.P_gen:.4f} pu, Q_gen = {bus.Q_gen:.4f} pu<br>"
-                f"P_last = {bus.P_load:.4f} pu, Q_last = {bus.Q_load:.4f} pu"
-            )
-
-        buss_skjema = go.Scatter(
-            x=bus_x, y=bus_y, mode="markers+text",
-            marker=dict(symbol="square", size=16, color=NAVY, line=dict(width=1, color="white")),
-            text=bus_navn_liste, textposition="top center", textfont=dict(size=10, color=NAVY),
-            hovertext=bus_hover, hoverinfo="text", name="Busser", visible=True,
-        )
-
-        v_min, v_max = float(np.min(V)), float(np.max(V))
-        buss_heatmap = go.Scatter(
-            x=bus_x, y=bus_y, mode="markers+text",
-            marker=dict(
-                symbol="square", size=22,
-                color=bus_v, colorscale="RdBu_r", cmin=v_min, cmax=v_max,
-                colorbar=dict(title="Spenning [pu]"),
-                line=dict(width=1.2, color="black"),
-            ),
-            text=bus_navn_liste, textposition="middle center", textfont=dict(size=9, color="white"),
-            hovertext=bus_hover, hoverinfo="text", name="Busser (spenning)", visible=False,
-        )
-
-        fig = go.Figure(data=[linje_trace, trafo_trace, gen_trace, buss_skjema, buss_heatmap])
-
-        fig.update_layout(
-            title=f"Enlinjeskjema – {grid.Name} (zoombart – rull for å zoome, dra for å panorere)",
-            template="plotly_white",
-            dragmode="pan",
-            hovermode="closest",
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1),
-            margin=dict(l=20, r=20, t=70, b=20),
-            updatemenus=[dict(
-                type="buttons", direction="left", x=0.0, y=1.06, xanchor="left",
-                buttons=[
-                    dict(label="Enlinjeskjema", method="update",
-                         args=[{"visible": [True, True, True, True, False]}]),
-                    dict(label="Spenningsheatmap", method="update",
-                         args=[{"visible": [True, True, True, False, True]}]),
-                ],
-            )],
-        )
-
-        fig.write_html(html_navn, config={"scrollZoom": True})
-        print(f"Interaktivt enlinjeskjema for stort nett ({len(grid.bus)} busser) lagret: {html_navn}")
-    #------------lager interaktivt (zoombart) enlinjeskjema for store nett---
-
-
-    #------------lager enlinjeskjema-----------------------
-    def _lag_enlinjeskjema(pdf, grid, V, angle_deg, gridnavn, dato, sidetall, filnavn):
-
-        bus_pos = _beregn_skjematisk_pos(grid)
-
-        if not bus_pos:
-
-            fig = _ny_side()
-            _sidehode(fig, "ENLINJESKJEMA", "Ingen busser å tegne")
-
-            ax = fig.add_axes([0.08, INNHOLD_BUNN, 0.84, INNHOLD_TOPP - INNHOLD_BUNN])
-            ax.axis("off")
-            ax.text(0.5, 0.5, "Nettet har ingen busser.", ha="center", va="center",
-                    fontsize=13, color=DEMPET)
-
-            _side_med_innramming(pdf, fig, gridnavn, dato, sidetall)
-            return
-
-        gen_busser = _generator_busser(grid, bus_pos)
-
-        xlim, ylim, _, _ = _beregn_ramme(bus_pos, marg=0.30, topp_ekstra=0.0)
-        bredde = xlim[1] - xlim[0]
-        hoyde = ylim[1] - ylim[0]
-        xlim = (xlim[0], xlim[1] + bredde * 0.34)   # plass til tekstboksene til høyre for hver buss
-        ylim = (ylim[0] - hoyde * 0.18, ylim[1])    # plass til generatorstammene under bussene
         dx_tot = xlim[1] - xlim[0]
         dy_tot = ylim[1] - ylim[0]
 
-        side_bredde, side_hoyde, rute = _velg_side_og_rute(dx_tot, dy_tot)
+        bredde = 12.0
+        hoyde = max(6.0, min(20.0, bredde * dy_tot / dx_tot))
 
-        fig = plt.figure(figsize=(side_bredde, side_hoyde))
-        _sidehode(fig, "ENLINJESKJEMA", "Skjematisk enlinjeskjema med lastflytresultater")
-
-        ax = fig.add_axes(rute)
+        fig, ax = plt.subplots(figsize=(bredde, hoyde))
+        fig.patch.set_facecolor("white")
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_aspect("equal", adjustable="box")
         ax.axis("off")
 
-        xs = [p[0] for p in bus_pos.values()]
-        ys = [p[1] for p in bus_pos.values()]
-        span = max(max(xs) - min(xs), max(ys) - min(ys)) or 1.0
-
-        baner = _beregn_alle_baner(grid, bus_pos)
+        span = max(dx, dy) or 1.0
 
         _tegn_underliggende_nett(ax, grid, bus_pos, gen_busser, span, baner)
 
@@ -796,73 +619,52 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
                     bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor=LINJEGRA, alpha=0.92),
                 )
 
-        html_navn = None
         if not vis_verditekst:
-            html_navn = (filnavn[:-4] if filnavn.lower().endswith(".pdf") else filnavn) + "_interaktiv.html"
             ax.text(
-                0.5, 0.02,
-                f"For mange noder til å vise enkeltverdier i diagrammet – se resultattabellen,\n"
-                f"eller åpne den zoombare versjonen: {html_navn}",
+                0.5, 0.02, "For mange noder til å vise enkeltverdier i diagrammet.",
                 ha="center", va="bottom", transform=ax.transAxes, fontsize=9, color=DEMPET,
             )
 
         _diagramlegende_skjema(ax)
 
-        _side_med_innramming(pdf, fig, gridnavn, dato, sidetall)
-
-        if html_navn is not None:
-            _lag_interaktiv_html(grid, V, angle_deg, bus_pos, gen_busser, html_navn)
-    #------------lager enlinjeskjema-----------------------
+        fig.tight_layout()
+        return fig
+    #------------bygger enlinjeskjema-figuren (matplotlib)------------------
 
 
-    #------------lager spenningsheatmap---------------------
-    def _lag_spenningsheatmap(pdf, grid, V, angle_deg, gridnavn, dato, sidetall):
+    #------------bygger et heatmap-figur (matplotlib) – gjenbrukes for---
+    #------------både spennings- og vinkelheatmap---------------------------
+    def _bygg_heatmap_figur(grid, verdier, bus_pos, gen_busser, baner, tittel_kort, cbar_tekst, senter):
 
-        bus_pos = _beregn_skjematisk_pos(grid)
+        xs = [p[0] for p in bus_pos.values()]
+        ys = [p[1] for p in bus_pos.values()]
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+        dx = (x_max - x_min) or 1.0
+        dy = (y_max - y_min) or 1.0
 
-        if not bus_pos:
+        x_pad = dx * 0.28
+        y_pad = dy * 0.28
+        xlim = (x_min - x_pad, x_max + x_pad)
+        ylim = (y_min - y_pad - dy * 0.18, y_max + y_pad)
 
-            fig = _ny_side()
-            _sidehode(fig, "SPENNINGSHEATMAP", "Ingen busser å tegne")
-
-            ax = fig.add_axes([0.08, INNHOLD_BUNN, 0.84, INNHOLD_TOPP - INNHOLD_BUNN])
-            ax.axis("off")
-            ax.text(0.5, 0.5, "Nettet har ingen busser.", ha="center", va="center",
-                    fontsize=13, color=DEMPET)
-
-            _side_med_innramming(pdf, fig, gridnavn, dato, sidetall)
-            return
-
-        gen_busser = _generator_busser(grid, bus_pos)
-
-        xlim, ylim, _, _ = _beregn_ramme(bus_pos, marg=0.28, topp_ekstra=0.0)
-        hoyde = ylim[1] - ylim[0]
-        ylim = (ylim[0] - hoyde * 0.18, ylim[1])
         dx_tot = xlim[1] - xlim[0]
         dy_tot = ylim[1] - ylim[0]
 
-        side_bredde, side_hoyde, rute = _velg_side_og_rute(dx_tot, dy_tot)
-        rute = [rute[0], rute[1], rute[2] * 0.86, rute[3]]  # plass til fargeskala til høyre
+        bredde = 12.0
+        hoyde = max(6.0, min(20.0, bredde * dy_tot / dx_tot))
 
-        fig = plt.figure(figsize=(side_bredde, side_hoyde))
-        _sidehode(fig, "SPENNINGSHEATMAP", "Spenning per node på enlinjeskjemaet")
-
-        ax = fig.add_axes(rute)
+        fig, ax = plt.subplots(figsize=(bredde + 1.3, hoyde))
+        fig.patch.set_facecolor("white")
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_aspect("equal", adjustable="box")
         ax.axis("off")
 
-        xs = [p[0] for p in bus_pos.values()]
-        ys = [p[1] for p in bus_pos.values()]
-        span = max(max(xs) - min(xs), max(ys) - min(ys)) or 1.0
-
-        baner = _beregn_alle_baner(grid, bus_pos)
-
+        span = max(dx, dy) or 1.0
         _tegn_underliggende_nett(ax, grid, bus_pos, gen_busser, span, baner)
 
-        v_min, v_max = float(np.min(V)), float(np.max(V))
-        senter = 1.0
+        v_min, v_max = float(np.min(verdier)), float(np.max(verdier))
         if v_min >= senter:
             v_min = senter - 1e-4
         if v_max <= senter:
@@ -878,7 +680,7 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
                 continue
 
             x, y = bus_pos[bus.busNumber]
-            farge = cmap(norm(V[i]))
+            farge = cmap(norm(verdier[i]))
 
             ax.add_patch(FancyBboxPatch(
                 (x - boks_w / 2, y - boks_h / 2), boks_w, boks_h,
@@ -888,20 +690,149 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
 
             lys_bakgrunn = sum(farge[:3]) / 3 > 0.55
             ax.text(
-                x, y, f"Bnr: {bus.busNumber}\nV={V[i]:.3f}\nδ°={angle_deg[i]:.3f}",
+                x, y, f"Bnr: {bus.busNumber}\n{tittel_kort}={verdier[i]:.3f}",
                 ha="center", va="center", fontsize=6.3, fontweight="bold", zorder=11,
                 color=(TEKST if lys_bakgrunn else "white"),
             )
 
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        cbar_ax = fig.add_axes([rute[0] + rute[2] + 0.025, rute[1], 0.025, rute[3]])
-        cbar = fig.colorbar(sm, cax=cbar_ax)
-        cbar.set_label("Spenning [pu]", fontsize=8.5, color=TEKST)
-        cbar.ax.tick_params(labelsize=7.5, colors=DEMPET)
+        cbar = fig.colorbar(sm, ax=ax, fraction=0.05, pad=0.03)
+        cbar.set_label(cbar_tekst, fontsize=9, color=TEKST)
+        cbar.ax.tick_params(labelsize=8, colors=DEMPET)
 
-        _side_med_innramming(pdf, fig, gridnavn, dato, sidetall)
-    #------------lager spenningsheatmap---------------------
+        fig.tight_layout()
+        return fig
+    #------------bygger et heatmap-figur (matplotlib)------------------------
+
+
+    #------------konverterer en matplotlib-figur til en SVG-streng----------
+    def _figur_til_svg(fig):
+        buf = io.StringIO()
+        fig.savefig(buf, format="svg", bbox_inches="tight")
+        plt.close(fig)
+        svg = buf.getvalue()
+        if "?>" in svg:
+            svg = svg.split("?>", 1)[1]   # fjern XML-deklarasjonen (ugyldig midt i en HTML-fil)
+        return svg
+    #------------konverterer en matplotlib-figur til en SVG-streng----------
+
+
+    #------------lager interaktivt (zoombart) enlinjeskjema---------------
+    def _lag_interaktiv_html(grid, V, angle_deg, bus_pos, gen_busser, html_navn):
+        """Lager en zoombar/pannbar HTML-versjon av enlinjeskjemaet. Selve
+        tegningen er nøyaktig den samme matplotlib-tegningen (symboler,
+        farger, layout) som ble brukt i enlinjeskjema-/heatmap-sidene
+        tidligere – bare eksportert som SVG og lagt i en side med en enkel
+        zoom/pan-visning og en bryter mellom skjematisk visning,
+        spenningsheatmap og vinkelheatmap, i stedet for en statisk PDF-side."""
+
+        if not bus_pos:
+            print(f"Advarsel: ingen busser å tegne – hopper over interaktivt diagram ({html_navn}).")
+            return
+
+        baner = _beregn_alle_baner(grid, bus_pos)
+
+        svg_skjema = _figur_til_svg(_bygg_enlinjeskjema_figur(grid, V, angle_deg, bus_pos, gen_busser, baner))
+        svg_v = _figur_til_svg(_bygg_heatmap_figur(grid, V, bus_pos, gen_busser, baner, "V", "Spenning [pu]", 1.0))
+        svg_delta = _figur_til_svg(_bygg_heatmap_figur(grid, angle_deg, bus_pos, gen_busser, baner, "δ°", "Vinkel δ [°]", 0.0))
+
+        html = f"""<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>Enlinjeskjema – {grid.Name}</title>
+<style>
+  html, body {{ margin:0; height:100%; overflow:hidden; font-family: Arial, sans-serif; background:#F4F6F8; }}
+  #knapper {{ padding:10px 14px; background:#17324F; }}
+  #knapper button {{
+    margin-right:8px; padding:7px 14px; border:none; border-radius:6px;
+    background:#2E75B6; color:white; font-size:13px; cursor:pointer;
+  }}
+  #knapper button.valgt {{ background:#EAF2FB; color:#17324F; font-weight:bold; }}
+  #knapper button:hover {{ opacity:0.9; }}
+  #ramme {{ overflow:hidden; width:100vw; height:calc(100vh - 48px); cursor:grab; background:white; }}
+  #ramme:active {{ cursor:grabbing; }}
+  .visning {{ display:none; transform-origin: 0 0; }}
+  .visning.aktiv {{ display:block; }}
+  .visning svg {{ display:block; }}
+</style>
+</head>
+<body>
+  <div id="knapper">
+    <button data-mal="skjema" class="valgt">Enlinjeskjema</button>
+    <button data-mal="v">Spenningsheatmap</button>
+    <button data-mal="delta">Vinkelheatmap</button>
+    <button id="nullstill" style="background:#6B7684">Nullstill visning</button>
+  </div>
+  <div id="ramme">
+    <div id="visning-skjema" class="visning aktiv">{svg_skjema}</div>
+    <div id="visning-v" class="visning">{svg_v}</div>
+    <div id="visning-delta" class="visning">{svg_delta}</div>
+  </div>
+
+<script>
+(function() {{
+  const ramme = document.getElementById("ramme");
+  const visninger = {{
+    skjema: document.getElementById("visning-skjema"),
+    v: document.getElementById("visning-v"),
+    delta: document.getElementById("visning-delta"),
+  }};
+  let aktivKey = "skjema";
+  let skala = 1, dx = 0, dy = 0;
+  let dragger = false, sx = 0, sy = 0;
+
+  function oppdater() {{
+    visninger[aktivKey].style.transform = "translate(" + dx + "px, " + dy + "px) scale(" + skala + ")";
+  }}
+
+  function nullstill() {{ skala = 1; dx = 0; dy = 0; oppdater(); }}
+
+  document.querySelectorAll("#knapper button[data-mal]").forEach(function(btn) {{
+    btn.addEventListener("click", function() {{
+      document.querySelectorAll("#knapper button[data-mal]").forEach(b => b.classList.remove("valgt"));
+      btn.classList.add("valgt");
+      Object.values(visninger).forEach(v => v.classList.remove("aktiv"));
+      aktivKey = btn.dataset.mal;
+      visninger[aktivKey].classList.add("aktiv");
+      nullstill();
+    }});
+  }});
+  document.getElementById("nullstill").addEventListener("click", nullstill);
+
+  ramme.addEventListener("wheel", function(e) {{
+    e.preventDefault();
+    const faktor = e.deltaY < 0 ? 1.1 : 0.9;
+    const rect = ramme.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    dx = mx - (mx - dx) * faktor;
+    dy = my - (my - dy) * faktor;
+    skala *= faktor;
+    oppdater();
+  }}, {{ passive: false }});
+
+  ramme.addEventListener("mousedown", function(e) {{ dragger = true; sx = e.clientX - dx; sy = e.clientY - dy; }});
+  window.addEventListener("mouseup", function() {{ dragger = false; }});
+  window.addEventListener("mousemove", function(e) {{
+    if (!dragger) return;
+    dx = e.clientX - sx; dy = e.clientY - sy;
+    oppdater();
+  }});
+
+  oppdater();
+}})();
+</script>
+</body>
+</html>
+"""
+
+        with open(html_navn, "w", encoding="utf-8") as f:
+            f.write(html)
+
+        print(f"Interaktivt enlinjeskjema lagret: {html_navn}")
+    #------------lager interaktivt (zoombart) enlinjeskjema---------------
+
 
 
     #----------------------Tegner en generisk tabell--------
@@ -933,7 +864,7 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
 
 
     #----------------------Lager linjetabell-----------------
-    def _lag_linjetabell(pdf, grid, gridnavn, dato, sidetall):
+    def _lag_linjetabell(pdf, grid, gridnavn, dato, sidetall, Sbase):
 
         fig = _ny_side()
         _sidehode(fig, "LINJETABELL", "Linjer og transformatorer")
@@ -947,17 +878,31 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         ax1 = fig.add_axes([0.065, INNHOLD_TOPP - linje_h, 0.87, linje_h - 0.03])
         ax1.axis("off")
 
-        kol_linje = ["#", "Fra", "Til", "R [pu]", "X [pu]", "B [pu]", "Lengde"]
-        rader_linje = [
-            [
+        losning = getattr(grid, "solution", None)
+        flyt = getattr(losning, "flow_in_line", None)
+        har_flyt = flyt is not None and len(flyt) == len(grid.line)
+
+        kol_linje = ["#", "Fra", "Til", "R [pu]", "X [pu]", "B [pu]", "Lengde", "P flyt [MW]", "Q flyt [MVAr]"]
+        rader_linje = []
+        for i, l in enumerate(grid.line):
+            if har_flyt:
+                p_flyt = f"{flyt[i].real * Sbase:.2f}"
+                q_flyt = f"{flyt[i].imag * Sbase:.2f}"
+            else:
+                p_flyt, q_flyt = "-", "-"
+            rader_linje.append([
                 str(i + 1), str(l.Frombus), str(l.Tobus), f"{l.R:.5g}", f"{l.X:.5g}", f"{l.B:.3g}",
                 (f"{l.lenght:.0f}" if l.lenght is not None else "-"),
-            ]
-            for i, l in enumerate(grid.line)
-        ]
+                p_flyt, q_flyt,
+            ])
         _teikna_tabell(ax1, kol_linje, rader_linje)
 
         trafo_topp = INNHOLD_TOPP - linje_h - 0.06
+
+        if not har_flyt and grid.line:
+            fig.text(0.065, trafo_topp + 0.025, "Linjeflyt er ikke tilgjengelig (mangler gyldig lastflyt-løsning).",
+                      fontsize=8, color=DEMPET)
+
         fig.text(0.065, trafo_topp, "TRANSFORMATORER", fontsize=11, fontweight="bold", color=NAVY, va="top")
 
         ax2 = fig.add_axes([0.065, trafo_topp - trafo_h, 0.87, trafo_h - 0.03])
@@ -1185,30 +1130,27 @@ def lag_rapport(grid, V, angle, P, Q, filnavn="kraftsystem_rapport.pdf"):
         _side_med_innramming(pdf, fig, grid.Name, dato, 1)
 
         # =================================================
-        # SIDE 2 – ENLINJESKJEMA
-        # =================================================
-
-        _lag_enlinjeskjema(pdf, grid, V, angle_deg, grid.Name, dato, 2, filnavn)
-
-        # =================================================
-        # SIDE 3 – SPENNINGSHEATMAP
-        # =================================================
-
-        _lag_spenningsheatmap(pdf, grid, V, angle_deg, grid.Name, dato, 3)
-
-        # =================================================
-        # SIDE 4 – RESULTATTABELL (NODER)
+        # SIDE 2 – RESULTATTABELL (NODER)
         # =================================================
 
         _lag_resultattabell(
             pdf, grid, V, angle_deg, P_MW, Q_MVAr, bus_nr, bus_navn,
-            grid.Name, dato, 4,
+            grid.Name, dato, 2,
         )
 
         # =================================================
-        # SIDE 5 – LINJETABELL
+        # SIDE 3 – LINJETABELL
         # =================================================
 
-        _lag_linjetabell(pdf, grid, grid.Name, dato, 5)
+        _lag_linjetabell(pdf, grid, grid.Name, dato, 3, Sbase)
+
+    # =================================================
+    # ENLINJESKJEMA + HEATMAP – interaktiv, zoombar HTML ved siden av PDF-en
+    # =================================================
+
+    bus_pos = _beregn_skjematisk_pos(grid)
+    gen_busser = _generator_busser(grid, bus_pos)
+    html_navn = (filnavn[:-4] if filnavn.lower().endswith(".pdf") else filnavn) + "_interaktiv.html"
+    _lag_interaktiv_html(grid, V, angle_deg, bus_pos, gen_busser, html_navn)
     #---------------lager rapport--------------------------
 #---------------------Lager rapporten----------------------------------------

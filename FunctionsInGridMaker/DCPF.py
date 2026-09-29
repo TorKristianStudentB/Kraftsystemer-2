@@ -125,6 +125,7 @@ def dc_power_flow(grid):
          pv_to_pq_generators = None,
          power=None,
          qower=None,
+         type="DCPF"
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
    

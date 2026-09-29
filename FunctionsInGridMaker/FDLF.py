@@ -238,6 +238,7 @@ def FDLF(grid):
       pv_to_pq_generators = None,
       power=np.array(None),
       qower=np.array(None),
+      type = "FDLF",
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 

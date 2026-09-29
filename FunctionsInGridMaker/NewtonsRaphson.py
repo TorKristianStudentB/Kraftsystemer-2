@@ -216,6 +216,10 @@ def NewtonRaphson(grid):
                for j in range(N):
                   P_inwork=P_inwork+powerflowequationP(i,j)
                deltaPQ.append(P_scheduled[i]-P_inwork)
+               #------gir n-1 svar fordi ref ikke er med, men kan lett finnes ut av-----
+               P.append(P_inwork)
+               Q.append(Q_scheduled[i]) #tror dette er riktig, men er usikker
+               #------gir n-1 svar fordi ref ikke er med, men kan lett finnes ut av-----
             elif busPVPQ[i]=="PQ":
                P_inwork=0
                Q_inwork=0
@@ -329,6 +333,7 @@ def NewtonRaphson(grid):
         pv_to_pq_generators = pv_to_pq_generators,
         power=np.array(power),
         qower=np.array(qower),
+        type = "NR",
     )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 
