@@ -1,6 +1,6 @@
 from GridMaker.Imports import pd,np,pp
 
-def validating(grid,Excelark,IMPEDANCE_UNIT):
+def validating_PP_NR(grid):
 
    #---------KONVERTER R OG X TIL P.U.------------------------
    def impedance_to_pu(r, x, vbase_kv, sbase_mva):
@@ -397,17 +397,24 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
       print("\nBus-resultater:")
       print(results)
 
+      #------------------------------------------------
+      #------------------------------------------------
+      # FYLL INN DENNE UNDER; SÅ SKAL KODEN FUNGERE :)
+      #------------------------------------------------
+      #------------------------------------------------
+
       #---------------Loader løsningen som et eget object under hovednettet-----------
       grid.solution = grid.__class__.Solution(
-            volt=np.array(results["vm_pu"]),
-            angle=np.radians(np.array(results["va_degree"])),
+            volt=None,
+            angle=None,
             iterasjoner=0,
             mismatch=None,
-            konvergerte=net.converged,
+            konvergerte=None,
             flow_in_line=None,
             pv_to_pq_generators=None,
-            power=np.array(results["p_mw"]),
-            qower=np.array(results["q_mvar"]),
+            power=None,
+            qower=None,
+            type="PP_NR"
       )
    #---------HOVEDFUNKSJON-----------------------------------
    run_excel_with_pandapower(Excelark)
