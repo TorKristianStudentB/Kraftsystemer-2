@@ -1,3 +1,5 @@
+from GridMaker.Imports import np
+
 #-----------Denne algoritmen har jeg laget selv, og har kodet den på ark før den kom her--------
 def theveninZth(grid,bus1,bus2):
       Par=[]
@@ -147,4 +149,4 @@ def theveninZth(grid,bus1,bus2):
        if not endret:
           raise ValueError("Fant ingen vei mellom bus1 og bus2")
       return Z[0]
-#-----------Denne algoritmen har jeg laget helt selv, og har kodet den på ark før den kom her--------
+#-----------Denne algoritmen har jeg laget helt selv, og har kodet den på ark før den kom her---

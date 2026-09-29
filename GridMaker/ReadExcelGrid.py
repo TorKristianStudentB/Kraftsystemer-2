@@ -1,209 +1,8 @@
-import os
-from pathlib import Path
-import pandas as pd
-import random
-import sys
-import numpy as np
-
-
-
-#--------------------Hente filstien til megselv, må øke til mer--------
-current_path = os.getcwd()
-current_path=Path(current_path)
-KodePath=current_path.parent 
-KodePath=KodePath / "Grid"
-sys.path.append(str(KodePath))
-#--------------------Hente filstien til megselv, må øke til mer--------
-
-#--------funksjonshenting---------
-from theveninZth2 import theveninZth
-from admittansmatrise import cutsem
-from NewtonsRaphson2 import NewtonRaphson
-#--------funksjonshenting---------
-
-#----------------Fetching the lates grid xlsx file start-----------------------
-FolderName = "Server_host"
-FileName = "MainGrid.xlsx"
-
-def read_xlsx(FolderName, FileName):
-    folder = Path(FolderName)
-    files = list(folder.rglob(FileName))
-    if not files:
-        raise FileNotFoundError(f"Could not find '{FileName}' in '{FolderName}'")
-    file = files[0]
-    print(f"Reading: {file}")
-
-    return pd.read_excel(file, sheet_name=None)
-#----------------Fetching the lates grid xlsx file end-----------------------
-
-
-#----------Making a grid from xslx start----
-class Grid:
-
-   def __init__(self,Name):
-      self.Name=Name
-      self.Base = None     # BaseValues object
-      self.bus = []        # list of bus objects
-      self.line = []       # list of line objects
-      self.trafo = []      # list of trafo objects
-      self.gen = []        # list of generators objects
-      self.solution = None # solution object etter lastflyt
-
-
-
-
-
-   def thevenin(self,bus1,bus2):
-      grid.loadflowsolutionNR()
-      Zth=theveninZth(self,bus1,bus2)
-      return f"Zth={Zth} og Vth={grid.bus[1].Volt-grid.bus[2].Volt}"
-
-   def admittansmatrise(self):
-      return cutsem(self)
-
-   def loadflowsolutionNR(self):
-      return NewtonRaphson(self)
-
-#-----------De løste verdiene i nettet etter en lastflytanalyse-----------
-   class Solution:
-      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower):
-         self.volt = volt
-         self.angle = angle
-         self.iterasjoner = iterasjoner
-         self.mismatch = mismatch
-         self.konvergerte = konvergerte
-         self.flow_in_line = flow_in_line
-         self.pv_to_pq_generators = pv_to_pq_generators
-         self.power = power
-         self.qower = qower
-#-----------De løste verdiene i nettet etter en lastflytanalyse-----------
-
-
-#----------Base values start----------------
-   class BaseValues:
-      def __init__(self,Sbase,Vbase):
-         self.Sbase = Sbase
-         self.Vbase = Vbase
-
-#----------Base values end------------------
-
-
-#----------bus start------------------------
-   class bus:
-      busNumber:int
-      Volt:float
-      Angle:float
-      P_gen:float
-      Q_gen:float
-      P_load:float
-      Q_load:float
-      Bidz : str
-      Vbase : float 
-
-      def __init__(self, busNumber,name,Volt,Angle,P_gen,Q_gen,P_load,Q_load,bidz,Vbase,V_max,V_min,eic_code,kodens_identifikasjonssystem):
-        self.busNumber = busNumber
-        self.Name = name
-        self.Volt = Volt
-        self.Angle = Angle
-        self.P_gen = P_gen
-        self.Q_gen = Q_gen
-        self.P_load = P_load
-        self.Q_load = Q_load
-        self.bidz = bidz
-        self.Vbase = Vbase
-        self.V_max = V_max
-        self.V_min = V_min
-        self.eic_code = eic_code
-        self.kodens_identifikasjonssystem = kodens_identifikasjonssystem
-
-
-      def finne_bus_indeks(self, busNumber):
-            for bus in self.bus:
-               if bus.busNumber == busNumber:
-                     return bus.kodens_identifikasjonssystem
-            return None
-                           
-
-
-#----------bus end------------------------
-
-
-#----------lines start----------------------
-   class line:   
-      lineNumber:int
-      R:float
-      X:float
-      B:float
-      Frombus:int
-      Tobus:int
-      lenght:float
-
-      def __init__(self,lineNumber,Name,R,X,B,Frombus,Tobus,lenght,eic_code):
-            self.lineNumber = lineNumber
-            self.Name = Name
-            self.R = R
-            self.X = X
-            self.B = B
-            self.Frombus = Frombus
-            self.Tobus = Tobus
-            self.lenght = lenght
-            self.eic_code = eic_code
-
-
-      def admittans(self):
-         return 1/complex(self.R, self.X)
-
-   
-#----------lines end----------------------
-      
-
-#----------Trafo start----------------------
-   class trafo:   
-      name:str
-      type:str
-      ratio:float
-      Frombus:float
-      Tobus:int
-      R:float
-      X:float
-
-      def __init__(self, name, type, ratio, Frombus, Tobus, R, X, eic_code):
-         self.Name = name
-         self.Type = type
-         self.ratio = ratio
-         self.Frombus = Frombus
-         self.Tobus = Tobus
-         self.R = R
-         self.X = X
-         self.eic_code = eic_code
-
-      def admittans(self):
-            return 1/complex(self.R, self.X)
-
-
-
-#----------Trafo end------------------------
-
-#----------Gen Start-----------------------
-   class gen:
-      name: str
-      P_max: float
-      type: float
-      Q_max:float
-      Q_min:float
-
-      def __init__(self, P_max,bus,name,Q_max,Q_min,eic_code):
-         self.P_max    = P_max
-         self.bus      = bus
-         self.name     = name
-         self.Q_max    = Q_max
-         self.Q_min    = Q_min
-         self.eic_code = eic_code
-#----------Making a grid from xslx end----
-
+from GridMaker.Imports import pd,Grid 
 
 #---------Start: Funskjon som fyller inn i objektet grid fra excel arket n490--------
-def MakeGrid(df):
+def MakeGrid(ExcelSheet):
+   df=pd.read_excel(ExcelSheet, sheet_name=None)
 
 
    #---------Leser excel arket og bruker pandas DF-------
@@ -215,8 +14,8 @@ def MakeGrid(df):
       genDF   = df["gen"]
       linkDF  = df["link"] if "link" in df else None   # lenke-fanen er valgfri
       return grid, busDF, lineDF, trafoDF, genDF, linkDF
-   grid, busDF, lineDF, trafoDF, genDF, linkDF = lese_excel_arket()
    #---------Leser excel arket og bruker pandas DF-------
+   grid, busDF, lineDF, trafoDF, genDF, linkDF = lese_excel_arket()
 
 
    #----------Sjekker linkene og setter effekten på P-load =P_load-Pinj, trenger derfor ikke lenkene i nettmodellen-------
@@ -241,9 +40,9 @@ def MakeGrid(df):
                      bus1=linkDF["bus1"].iloc[i]
                      Pinj=linkDF["Pinj"].iloc[i]
                      busDF["P_load"].iloc[bus1]=busDF["P_load"].iloc[bus1] - Pinj
-   link()
    #----------Sjekker linkene og setter effekten på P-load =P_load-Pinj, trenger derfor ikke lenkene i nettmodellen-------
-       
+   link()      
+
 
    #----------Sjekker om det er Q og V begrensinger i excelarket-------------
    def betingelser_for_Q_og_V():
@@ -251,7 +50,12 @@ def MakeGrid(df):
       Q_min=False
       V_min=False
       V_max=False
+      P_max=False
+      cordinater=False
+      plassering=False
 
+      if "Pmax" in genDF.columns:
+               P_max=True
       if "Qmax" in genDF.columns:
          Q_max=True
       if "Qmin" in genDF.columns:
@@ -260,9 +64,13 @@ def MakeGrid(df):
                V_max=True
       if "Vmin" in busDF.columns:
                V_min=True
-      return Q_max,Q_min,V_max,V_min
-   Q_max,Q_min,V_max,V_min=betingelser_for_Q_og_V()
+      if "lat" in busDF.columns and "lon" in busDF.columns:
+               cordinater=True
+      if "x" in busDF.columns and "y" in busDF.columns:
+               plassering=True
+      return Q_max,Q_min,V_max,V_min,P_max,cordinater,plassering
    #----------Sjekker om det er Q og V begrensinger i excelarket-------------
+   Q_max , Q_min , V_max , V_min , P_max , cordinater , plassering = betingelser_for_Q_og_V()
 
 
    #--------------Sjekker om excelarket har eic koder-----------------------
@@ -281,9 +89,9 @@ def MakeGrid(df):
        if "eic code" in genDF.columns:
             eic_code_gen = True
        return eic_code_bus,eic_code_line,eic_code_trafo,eic_code_gen
-   eic_code_bus,eic_code_line,eic_code_trafo,eic_code_gen = eickode()
    #--------------Sjekker om excelarket har eic koder-----------------------
-
+   eic_code_bus , eic_code_line , eic_code_trafo , eic_code_gen = eickode()
+ 
 
    #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
    def konverter_til_PU():
@@ -296,12 +104,14 @@ def MakeGrid(df):
         busDF["P_load"] = busDF["P_load"] / Sbase
         busDF["Q_load"] = busDF["Q_load"] / Sbase
 
+        if P_max==True:
+            genDF["Pmax"] = genDF["Pmax"] / Sbase
         if Q_max==True:
             genDF["Qmax"] = genDF["Qmax"] / Sbase
         if Q_min==True:
             genDF["Qmin"] = genDF["Qmin"] / Sbase
-   konverter_til_PU()
    #-------------for å konvertere R og X til PU verdier før det lastes til nettet---------
+   konverter_til_PU()
 
 
    #---------Finner busser som står alene-----------------------
@@ -314,9 +124,8 @@ def MakeGrid(df):
          if bus not in busser_i_line and bus not in busser_i_trafo:
             busser_alene.append(int(bus))
       return busser_alene
-   busser_alene = finn_elementer_alene()
    #---------Finner busser som står alene-----------------------
-
+   busser_alene = finn_elementer_alene()
 
 
    #---------Sette verdier inn i grid objektet over-------------
@@ -347,6 +156,8 @@ def MakeGrid(df):
                V_min = float(busDF["Vmin"].iloc[i]) if V_min else None,
                eic_code = str(busDF["eic code"].iloc[i]) if eic_code_bus else None,
                kodens_identifikasjonssystem = i,
+               cords = [float(busDF["lat"].iloc[i]),float(busDF["lon"].iloc[i])] if cordinater else None,
+               place = [float(busDF["x"].iloc[i]),float(busDF["y"].iloc[i])] if plassering else None,
             )
             grid.bus.append(b)
 
@@ -398,22 +209,10 @@ def MakeGrid(df):
                )
                grid.gen.append(b)
          #--------------oppretter generator data fra excel arket---
-   Legge_verdier_i_objektet()
    #---------Sette verdier inn i grid objektet over-------------
+   Legge_verdier_i_objektet()
 
          
    return grid
 #---------END: Funskjon som fyller inn i objektet grid fra excel arket n490--------
-
-
-#----------Running---------------
-if __name__ == "__main__":
-   df = pd.read_excel(r"C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Grid\Enkel_nett_teste_qmaxmin.xlsx", sheet_name=None)
-   grid = MakeGrid(df)
-   grid.loadflowsolutionNR()
-   print(np.array(grid.solution.volt)*np.array([b.Vbase for b in grid.bus]))
-   print(grid.solution.pv_to_pq_generators)
-   print(np.array(grid.solution.qower)*grid.Base.Sbase)
-   print(np.array([b.Q_max for b in grid.gen]))
-   print(np.array([b.Q_min for b in grid.gen]))
 
