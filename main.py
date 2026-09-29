@@ -17,7 +17,7 @@ if __name__ == "__main__":
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
    grid.loadflowsolutionNR()
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
-
+   
    #-----------------Lager rapport om løsningene----------------
    lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
    #-----------------Lager rapport om løsningene----------------

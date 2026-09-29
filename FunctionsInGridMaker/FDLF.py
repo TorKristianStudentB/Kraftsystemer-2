@@ -232,12 +232,12 @@ def FDLF(grid):
       volt        = np.array([b.Volt for b in grid.bus]),
       angle       = np.array([b.Angle for b in grid.bus]),
       iterasjoner = int(iterasjon),
-      mismatch    = deltaPQ,
-      konvergerte = Konvergerte,
-      flow_in_line = np.array(flow_in_line),
-      pv_to_pq_generators = pv_to_pq_generators,
-      power=np.array(power),
-      qower=np.array(qower),
+      mismatch    = [feil_P,feil_Q],
+      konvergerte = konvergerte,
+      flow_in_line = np.array(None),
+      pv_to_pq_generators = None,
+      power=np.array(None),
+      qower=np.array(None),
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 
