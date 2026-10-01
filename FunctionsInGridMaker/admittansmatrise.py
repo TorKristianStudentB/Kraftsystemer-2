@@ -1,6 +1,6 @@
+from GridMaker.Imports import np
 
-import numpy as np
-
+#-----------------cutsem algoritmen utført utifra powerpoint til foreleseren------------
 def cutsem(grid):
    #----initaliserer admittansmatrisen----
    N=len(grid.bus)
@@ -67,3 +67,4 @@ def cutsem(grid):
 
 
    return Y
+#-----------------cutsem algoritmen utført utifra powerpoint til foreleseren------------
