@@ -1,33 +1,51 @@
 import math
 import sys
 from pathlib import Path
-import numpy as np
 
+import numpy as np
+import pandas as pd
 import pandapower as pp
 import pandapower.topology as top
+
 
 # ============================================================
 # 1. IMPORT NORDIC490 GRID
 # ============================================================
 
 project_path = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_path))
 
-from TorKode.MakeGridFromFile import MakeGrid, df
+# MakeGridFromFile.py imports its helper modules as top-level modules.
+sys.path.append(str(project_path))
+sys.path.append(str(project_path / "TorKode"))
+
+from TorKode.MakeGridFromFile import MakeGrid
+
+
+df = pd.read_excel(
+    project_path / "Grid" / "Nordic490_komplett.xlsx",
+    sheet_name=None
+)
+
+# Make column name match what MakeGridFromFile.py expects.
+if "S_base [MVA]" in df["bus"].columns and "S_base [MVA] " not in df["bus"].columns:
+    df["bus"] = df["bus"].rename(columns={
+        "S_base [MVA]": "S_base [MVA] "
+    })
 
 grid = MakeGrid(df)
 
-net = pp.create_empty_network()
+SBASE = grid.Base.Sbase
 
-# Map original Nordic490 bus numbers -> pandapower bus indices
-bus_map = {}
-
-SBASE = grid.Base.Sbase  # 100 MVA, used as the common power base throughout
+# Use the same system base in pandapower.
+net = pp.create_empty_network(sn_mva=SBASE)
 
 
 # ============================================================
 # 2. CREATE BUSES
 # ============================================================
+
+# Map original Grid bus numbers -> pandapower bus indices.
+bus_map = {}
 
 for bus in grid.bus:
     idx = pp.create_bus(
@@ -35,21 +53,30 @@ for bus in grid.bus:
         vn_kv=bus.Vbase,
         name=bus.Name,
     )
+
     bus_map[bus.busNumber] = idx
 
 print("Created buses:", len(net.bus))
 
 
 # ============================================================
-# 3. CREATE LINES (+ charging susceptance as split shunts)
+# 3. CREATE LINES + LINE CHARGING
 # ============================================================
-# Series R/X kept as impedance elements, same as before. Line charging (B)
-# is now represented: standard pi-model splits the total shunt susceptance
-# B into B/2 at each end bus. In pandapower a shunt's q_mvar is reactive
-# power ABSORBED at rated voltage, so a capacitive susceptance (B > 0),
-# which INJECTS reactive power, needs a negative q_mvar.
+#
+# MakeGridFromFile.py has already converted R and X to p.u.
+# The line model in admittansmatrise.py is:
+#
+#   y = 1 / (R + jX)
+#   y_shunt = jB
+#
+# with B/2 at each end of the line.
+#
+# Pandapower impedance elements use the same p.u. R/X values.
+# The shunt susceptance is represented by two shunts.
+# ============================================================
 
 for line in grid.line:
+
     pp.create_impedance(
         net,
         from_bus=bus_map[line.Frombus],
@@ -63,13 +90,17 @@ for line in grid.line:
     )
 
     if line.B != 0:
-        q_half_mvar = -(line.B / 2) * SBASE  # negative = capacitive injection
+        # In pandapower, positive q_mvar means reactive power absorbed.
+        # B > 0 is capacitive and therefore injects reactive power.
+        q_half_mvar = -(line.B / 2) * SBASE
+
         pp.create_shunt(
             net,
             bus=bus_map[line.Frombus],
             q_mvar=q_half_mvar,
             name=f"Line charging {line.Frombus}-{line.Tobus} (from side)",
         )
+
         pp.create_shunt(
             net,
             bus=bus_map[line.Tobus],
@@ -82,23 +113,24 @@ print("Created line-charging shunts:", len(net.shunt))
 
 
 # ============================================================
-# 4. CREATE TRANSFORMERS (proper ratio, not plain impedance)
+# 4. CREATE TRANSFORMERS
 # ============================================================
-# Every trafo in this dataset connects two different voltage levels, and
-# its "ratio" column is exactly Vbase(Frombus)/Vbase(Tobus) - i.e. Frombus
-# is consistently the LV side and Tobus the HV side. Rather than hardcode
-# that direction, the HV/LV assignment below is resolved from each bus's
-# actual vn_kv, so it self-corrects if that convention ever changes.
 #
-# ASSUMPTION: the sheet gives no per-transformer rated power, so each
-# transformer is treated as rated at the grid's SBASE (100 MVA) and its
-# pu R/X are converted to vk_percent / vkr_percent on that basis. No
-# magnetizing/iron-loss data is available, so i0_percent and pfe_kw are
-# left at 0. Since the ratio column matches the nominal bus voltage ratio
-# exactly, this is modeled as a fixed transformer at nominal tap (no
-# explicit tap deviation).
+# The original admittansmatrise.py uses:
+#
+#       y = 1 / (R + jX)
+#
+# and a tap ratio a = 1 / ratio.
+#
+# Here the transformer is represented using pandapower's
+# transformer model with the same p.u. R/X and SBASE.
+#
+# No magnetizing branch or phase shift exists in the source
+# model, so pfe_kw = 0, i0_percent = 0 and shift_degree = 0.
+# ============================================================
 
 for trafo in grid.trafo:
+
     from_idx = bus_map[trafo.Frombus]
     to_idx = bus_map[trafo.Tobus]
 
@@ -136,19 +168,22 @@ print("Created transformers:", len(net.trafo))
 # ============================================================
 # 5. CREATE LOADS
 # ============================================================
-# NOTE: Q_load is 0 for every bus in the source sheet, so this load flow
-# currently has essentially no reactive load anywhere in the system. That
-# is a data limitation, not something fixable in this script - results
-# should be expected to diverge from the reference voltages until real
-# reactive load data is available.
+#
+# MakeGridFromFile.py converts all P/Q bus values to p.u.
+# Pandapower expects MW/MVAr here, so convert back:
+#
+#       P_MW   = P_pu * SBASE
+#       Q_MVAr = Q_pu * SBASE
+# ============================================================
 
 for bus in grid.bus:
+
     if bus.P_load != 0 or bus.Q_load != 0:
         pp.create_load(
             net,
             bus=bus_map[bus.busNumber],
-            p_mw=bus.P_load,
-            q_mvar=bus.Q_load,
+            p_mw=bus.P_load * SBASE,
+            q_mvar=bus.Q_load * SBASE,
             name=f"Load bus {bus.busNumber}",
         )
 
@@ -156,63 +191,122 @@ print("Created loads:", len(net.load))
 
 
 # ============================================================
-# 6. PICK SLACK BUS, THEN CREATE GENERATORS AT ALL OTHER
-#    GENERATING BUSES (fixes the previous double-counting,
-#    where the slack bus also got a PV generator)
+# 6. FIND GENERATOR BUSSES
 # ============================================================
-# Reactive limits per bus are aggregated from the 'gen' sheet's
-# Q_max/Q_min (summed across all generating units at that bus), when
-# available, so PV buses aren't left with unlimited Q support.
+#
+# Use grid.gen to determine which busses are generator busses,
+# matching the existing Newton-Raphson implementation.
+#
+# grid.gen contains:
+#       P_max, bus, Q_max, Q_min
+#
+# while the actual P_gen/Q_gen on the bus are stored in grid.bus.
+# ============================================================
 
-q_limits_by_bus = {}
-for g in grid.gen:
-    bus_id = int(g.bus)
-    qmax, qmin = q_limits_by_bus.get(bus_id, (0.0, 0.0))
-    q_limits_by_bus[bus_id] = (qmax + g.Q_max, qmin + g.Q_min)
+generator_bus_ids = {
+    int(g.bus)
+    for g in grid.gen
+}
 
-generator_buses = [bus for bus in grid.bus if bus.P_gen > 0]
+generator_buses = [
+    bus for bus in grid.bus
+    if bus.busNumber in generator_bus_ids
+]
 
 if not generator_buses:
     raise ValueError("No generator buses found!")
 
-# Same selection as before (first generating bus) - arbitrary but kept
-# consistent with the original script; revisit if a specific reference
-# bus should be the slack instead.
-slack_bus = generator_buses[0]
+
+# ============================================================
+# 7. AGGREGATE GENERATOR Q LIMITS
+# ============================================================
+
+q_limits_by_bus = {}
+
+for g in grid.gen:
+
+    # Missing Q limits mean that no Q-limit constraint is supplied
+    # for this generator.
+    if g.Q_max is None or g.Q_min is None:
+        continue
+
+    bus_id = int(g.bus)
+
+    qmax, qmin = q_limits_by_bus.get(
+        bus_id,
+        (0.0, 0.0)
+    )
+
+    q_limits_by_bus[bus_id] = (
+        qmax + g.Q_max,
+        qmin + g.Q_min
+    )
+
+
+# ============================================================
+# 8. CREATE SLACK BUS
+# ============================================================
+#
+# The reference NR implementation treats grid.bus[0] as the
+# reference bus. Use the same convention here.
+# ============================================================
+
+slack_bus = grid.bus[0]
 
 pp.create_ext_grid(
     net,
     bus=bus_map[slack_bus.busNumber],
     vm_pu=slack_bus.Volt,
-    name="Temporary Slack",
+    va_degree=np.degrees(slack_bus.Angle),
+    name="Slack bus",
 )
 
-print("Temporary slack bus:", slack_bus.busNumber)
+print("Slack bus:", slack_bus.busNumber)
+
+
+# ============================================================
+# 9. CREATE OTHER GENERATORS AS PV BUSES
+# ============================================================
+#
+# Actual P_gen is stored in p.u. in grid.bus, so convert to MW.
+#
+# Q limits are also p.u. after MakeGrid's conversion, so convert
+# them back to MVAr when passing them to pandapower.
+# ============================================================
 
 for bus in generator_buses:
+
     if bus.busNumber == slack_bus.busNumber:
-        continue  # already represented by the ext_grid above
+        continue
 
-    qmax, qmin = q_limits_by_bus.get(bus.busNumber, (None, None))
-
-    pp.create_gen(
-        net,
-        bus=bus_map[bus.busNumber],
-        p_mw=bus.P_gen,
-        vm_pu=bus.Volt,
-        max_q_mvar=qmax,
-        min_q_mvar=qmin,
-        name=f"Generator bus {bus.busNumber}",
+    qmax, qmin = q_limits_by_bus.get(
+        bus.busNumber,
+        (None, None)
     )
+
+    gen_kwargs = {
+        "net": net,
+        "bus": bus_map[bus.busNumber],
+        "p_mw": bus.P_gen * SBASE,
+        "vm_pu": bus.Volt,
+        "name": f"Generator bus {bus.busNumber}",
+    }
+
+    if qmax is not None and qmin is not None:
+        gen_kwargs["max_q_mvar"] = qmax * SBASE
+        gen_kwargs["min_q_mvar"] = qmin * SBASE
+
+    pp.create_gen(**gen_kwargs)
 
 print("Created generators:", len(net.gen))
 
 
 # ============================================================
-# 7. NETWORK CHECK
+# 10. NETWORK SUMMARY
 # ============================================================
 
 print("\n--- NETWORK SUMMARY ---")
+print("SBASE:", SBASE, "MVA")
 print("Buses:", len(net.bus))
 print("Impedances:", len(net.impedance))
 print("Transformers:", len(net.trafo))
@@ -225,31 +319,34 @@ assert len(net.bus) > 0, "No buses created!"
 assert len(net.impedance) > 0, "No line impedances created!"
 assert len(net.trafo) > 0, "No transformers created!"
 assert len(net.load) > 0, "No loads created!"
-assert len(net.gen) > 0, "No generators created!"
+assert len(net.ext_grid) > 0, "No external grid created!"
 
 
 # ============================================================
-# 8. FIND AND DISABLE BUSES NOT CONNECTED TO THE SLACK
+# 11. FIND AND DISABLE BUSES NOT CONNECTED TO THE SLACK
 # ============================================================
-# Done programmatically instead of hardcoding bus indices, so it stays
-# correct if the underlying grid data changes. In this dataset these turn
-# out to be HVDC converter-station buses (present in the 'link' sheet,
-# not the AC 'line'/'trafo' sheets), so excluding them from the AC load
-# flow is expected, not a bug.
 
 unsupplied = top.unsupplied_buses(net)
+
 if unsupplied:
     net.bus.loc[list(unsupplied), "in_service"] = False
 
-print("\nBuses disabled as unsupplied (not connected to slack):", sorted(unsupplied))
-print("Active bus count:", net.bus["in_service"].sum())
+print(
+    "\nBuses disabled as unsupplied (not connected to slack):",
+    sorted(unsupplied)
+)
+print(
+    "Active bus count:",
+    net.bus["in_service"].sum()
+)
 
 
 # ============================================================
-# 9. RUN FAST DECOUPLED LOAD FLOW
+# 12. RUN FAST DECOUPLED LOAD FLOW
 # ============================================================
 
 try:
+
     pp.runpp(
         net,
         algorithm="fdxb",
@@ -258,27 +355,24 @@ try:
         max_iteration=50,
         tolerance_mva=1e-6,
     )
+
     print("\nSolver converged:", net.converged)
 
 except Exception as e:
+
     print("\nLoad flow failed:")
     print(type(e).__name__, e)
     raise
 
 
-
-
 # ============================================================
-# 10. DISPLAY CALCULATED POWER FLOW RESULTS (NO3)
+# 13. DISPLAY CALCULATED POWER FLOW RESULTS (NO3)
 # ============================================================
-
-import pandas as pd
-import numpy as np
 
 if net.converged:
 
     # --------------------------------------------------------
-    # 1. Aggregate calculated generator results per bus
+    # Aggregate calculated generator results per bus
     # --------------------------------------------------------
 
     gen_results = net.res_gen.copy()
@@ -287,25 +381,31 @@ if net.converged:
     ext_results = net.res_ext_grid.copy()
     ext_results["bus"] = net.ext_grid["bus"]
 
-    # Combine normal generators and slack generation
-    all_gen = pd.concat([
-        gen_results[["bus", "p_mw", "q_mvar"]],
-        ext_results[["bus", "p_mw", "q_mvar"]]
-    ], ignore_index=True)
+    all_gen = pd.concat(
+        [
+            gen_results[["bus", "p_mw", "q_mvar"]],
+            ext_results[["bus", "p_mw", "q_mvar"]],
+        ],
+        ignore_index=True,
+    )
 
     gen_by_bus = all_gen.groupby("bus")[["p_mw", "q_mvar"]].sum()
 
+
     # --------------------------------------------------------
-    # 2. Aggregate calculated load results per bus
+    # Aggregate calculated load results per bus
     # --------------------------------------------------------
 
     load_results = net.res_load.copy()
     load_results["bus"] = net.load["bus"]
 
-    load_by_bus = load_results.groupby("bus")[["p_mw", "q_mvar"]].sum()
+    load_by_bus = load_results.groupby(
+        "bus"
+    )[["p_mw", "q_mvar"]].sum()
+
 
     # --------------------------------------------------------
-    # 3. Build NO3 results using pandapower results
+    # Build NO3 results
     # --------------------------------------------------------
 
     results = []
@@ -320,41 +420,51 @@ if net.converged:
         if not net.bus.at[idx, "in_service"]:
             continue
 
-        # Calculated voltage and angle
         vm_pu = net.res_bus.at[idx, "vm_pu"]
-        angle_rad = np.deg2rad(
-            net.res_bus.at[idx, "va_degree"]
+        angle_degree = net.res_bus.at[idx, "va_degree"]
+
+        p_gen = (
+            gen_by_bus.loc[idx, "p_mw"]
+            if idx in gen_by_bus.index
+            else 0.0
         )
 
-        # Calculated generation (including slack if applicable)
-        p_gen = gen_by_bus.loc[idx, "p_mw"] \
-            if idx in gen_by_bus.index else 0.0
+        q_gen = (
+            gen_by_bus.loc[idx, "q_mvar"]
+            if idx in gen_by_bus.index
+            else 0.0
+        )
 
-        q_gen = gen_by_bus.loc[idx, "q_mvar"] \
-            if idx in gen_by_bus.index else 0.0
+        p_load = (
+            load_by_bus.loc[idx, "p_mw"]
+            if idx in load_by_bus.index
+            else 0.0
+        )
 
-        # Calculated load
-        p_load = load_by_bus.loc[idx, "p_mw"] \
-            if idx in load_by_bus.index else 0.0
+        q_load = (
+            load_by_bus.loc[idx, "q_mvar"]
+            if idx in load_by_bus.index
+            else 0.0
+        )
 
-        q_load = load_by_bus.loc[idx, "q_mvar"] \
-            if idx in load_by_bus.index else 0.0
+        results.append(
+            {
+                "bus_id": bus.busNumber,
+                "name": bus.Name,
+                "bidz": bus.bidz,
+                "Vbase": bus.Vbase,
+                "V [P.U.]": vm_pu,
+                "Angle [degree]": angle_degree,
+                "P_gen [MW]": p_gen,
+                "Q_gen [MVAr]": q_gen,
+                "P_load [MW]": p_load,
+                "Q_load [MVAr]": q_load,
+            }
+        )
 
-        results.append({
-            "bus_id": bus.busNumber,
-            "name": bus.Name,
-            "bidz": bus.bidz,
-            "Vbase": bus.Vbase,
-            "V [P.U.]": vm_pu,
-            "Angle [rad]": angle_rad,
-            "P_gen [MW]": p_gen,
-            "Q_gen [MVAr]": q_gen,
-            "P_load [MW]": p_load,
-            "Q_load [MVAr]": q_load
-        })
 
     # --------------------------------------------------------
-    # 4. Print results
+    # Print results
     # --------------------------------------------------------
 
     no3_results = pd.DataFrame(results)
@@ -369,4 +479,5 @@ if net.converged:
     )
 
 else:
+
     print("Load flow did not converge.")
