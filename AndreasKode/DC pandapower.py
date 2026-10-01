@@ -3,40 +3,33 @@ import pandapower as pp
 import sys
 from pathlib import Path
 
-from TorKode.MakeGridFromFile import Grid, MakeGrid, read_xlsx, FileName, FolderName
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT))
+from GridMaker.Imports import MakeGrid
+
+grid = MakeGrid(ROOT / "Grid" / "test_trøndelagsnettet.xlsx")
+
+Sbase = grid.Base.Sbase
+
+for b in grid.bus:
+        print(b.busNumber, b.Name, b.Vbase, "kV", "P_gen=", b.P_gen * Sbase, "P_load=", b.P_load * Sbase)
+net = pp.create_empty_network(name="Trøndelag", sn_mva=Sbase)
 
 
-if __name__ == "__main__":
-    df=read_xlsx(FolderName, FileName) #leser excelfilen
-    grid=MakeGrid(df)                  #oppretter nettet
-
-
-# definerer regionen som NO3 for å få trøndelagsområdet.
-region_buses = [b for b in grid.bus if b.bidz == "NO3"]
-region_bus_ids = [b.busNumber for b in region_buses]
-region_lines = [l for l in grid.line if l.Frombus in region_bus_ids and l.Tobus in region_bus_ids]
-region_trafos = [t for t in grid.trafo if t.Frombus in region_bus_ids and t.Tobus in region_bus_ids]
-
-#Filtrerer ut verdier for å lage en pandapower-nettverk
-for b in region_buses:
-    print(b.busNumber, b.Name, b.Vbase, "kV", "P_gen=", b.P_gen , "P_load=", b.P_load)
-
-net = pp.create_empty_network(name="Nordic490 -NO3")
 
 bus_id_map = {}
-for b in region_buses:
+for b in grid.bus:
     pp_bus = pp.create_bus(net, vn_kv=b.Vbase, name=b.Name)
     bus_id_map[b.busNumber] = pp_bus
     if b.P_load > 0:
-        pp.create_load(net, pp_bus, p_mw=b.P_load, q_mvar=b.Q_load)
+        pp.create_load(net, pp_bus, p_mw=b.P_load * Sbase, q_mvar=b.Q_load * Sbase)
     if b.P_gen > 0:
-        pp.create_sgen(net, pp_bus, p_mw=b.P_gen, q_mvar=b.Q_gen)
+        pp.create_sgen(net, pp_bus, p_mw=b.P_gen * Sbase, q_mvar=b.Q_gen * Sbase)
 
-Sbase = 100  # MVA, fra bus-arket
+Vbase = {b.busNumber: b.Vbase for b in grid.bus}
 
-for l in region_lines:
-    bus = next(b for b in region_buses if b.busNumber == l.Frombus)
-    Zbase = bus.Vbase**2 / Sbase
+for l in grid.line:
+    Zbase = Vbase[l.Frombus]**2 / Sbase
     pp.create_line_from_parameters(
         net, from_bus=bus_id_map[l.Frombus], to_bus=bus_id_map[l.Tobus],
         length_km=1.0,
@@ -46,17 +39,16 @@ for l in region_lines:
     )
 
 
-for t in region_trafos:
-    hv_bus = next(b for b in region_buses if b.busNumber == t.Frombus)
-    lv_bus = next(b for b in region_buses if b.busNumber == t.Tobus)
+for t in grid.trafo:
+    hv, lv = (t.Frombus, t.Tobus) if Vbase[t.Frombus] >= Vbase[t.Tobus] else (t.Tobus, t.Frombus)
 
     pp.create_transformer_from_parameters(
         net,
-        hv_bus=bus_id_map[hv_bus.busNumber],
-        lv_bus=bus_id_map[lv_bus.busNumber],
+        hv_bus=bus_id_map[hv],
+        lv_bus=bus_id_map[lv],
         sn_mva=Sbase,
-        vn_hv_kv=hv_bus.Vbase,
-        vn_lv_kv=lv_bus.Vbase,
+        vn_hv_kv=Vbase[hv],
+        vn_lv_kv=Vbase[lv],
         vk_percent=abs(complex(t.R, t.X)) * 100,
         vkr_percent=t.R * 100,
         pfe_kw=0,
@@ -65,13 +57,13 @@ for t in region_trafos:
     )
 
 # Setter den største generatoren som slack-bus
-slack = next(b for b in region_buses if b.busNumber == 30)
+slack = next(b for b in grid.bus if b.busNumber == 30)
 pp.create_ext_grid(net, bus_id_map[slack.busNumber])
 
 pp.rundcpp(net)
 
 print(net.res_bus[["va_degree"]])
-print(net.res_line[["p_from_mw", "p_to_mw", "loading_percent"]])
+print(net.res_line[["p_from_mw", "p_to_mw"]])#, "loading_percent"]])
                     
                 
 
