@@ -4,7 +4,7 @@ from GridMaker.Imports import MakeGrid, Grid, np, validating,  lag_rapport, Path
 
 
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
-ExcelSheet = Path.cwd() / "Grid" / "Enkel_nett_teste_qmaxmin.xlsx"
+ExcelSheet = Path.cwd() / "Grid" / "test_trøndelagsnettet.xlsx"
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
 
 
