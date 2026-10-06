@@ -327,8 +327,9 @@ def NewtonRaphson(grid):
         konvergerte = Konvergerte,
         flow_in_line = np.array(flow_in_line),
         pv_to_pq_generators = pv_to_pq_generators,
-        power=np.array(power),
-        qower=np.array(qower),
+        power = np.array([sum(powerflowequationP(i, j) for j in range(len(grid.bus))) for i in range(len(grid.bus))]),
+        qower = np.array([sum(powerflowequationQ(i, j) for j in range(len(grid.bus))) for i in range(len(grid.bus))]),
+
     )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 
