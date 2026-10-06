@@ -15,11 +15,11 @@ if __name__ == "__main__":
    #---------lager nettet til klassen grid fra excelarket-------
    
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
-   grid.FDLF()
+   grid.loadflowsolutionNR()
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
    
    #-----------------Lager rapport om løsningene----------------
    lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
    #-----------------Lager rapport om løsningene----------------
-   
+
 #----------Main Running---------------
