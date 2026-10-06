@@ -56,7 +56,7 @@ for t in grid.trafo:
         name=t.Name,
     )
 
-# Setter den største generatoren som slack-bus
+# Setter slackbus = bus 30
 slack = next(b for b in grid.bus if b.busNumber == 30)
 pp.create_ext_grid(net, bus_id_map[slack.busNumber])
 
