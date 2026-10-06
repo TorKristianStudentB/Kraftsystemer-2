@@ -227,6 +227,19 @@ def FDLF(grid):
    for b in grid.bus:
       print(f"buss {b.busNumber:4d}  V={b.Volt:.4f} pu   vinkel={b.Angle:.4f} rad")
 
+   # ========== flow_in_line  =====
+
+   def flow_in_line():
+      flow = []
+      for l in grid.line:
+         b0 = next(b.kodens_identifikasjonssystem for b in grid.bus if b.busNumber == l.Frombus)
+         b1 = next(b.kodens_identifikasjonssystem for b in grid.bus if b.busNumber == l.Tobus)
+         v0 = np.abs(grid.bus[b0].Volt)*np.exp(1j*grid.bus[b0].Angle)
+         v1 = np.abs(grid.bus[b1].Volt)*np.exp(1j*grid.bus[b1].Angle)
+         straum = (v0 - v1)*l.admittans()
+         flow.append(v0*np.conj(straum))
+      return np.array(flow)
+
    #---------------Loader løsningen som et eget object under hovednettet-----------
    grid.solution = grid.__class__.Solution(
       volt        = np.array([b.Volt for b in grid.bus]),
@@ -234,10 +247,10 @@ def FDLF(grid):
       iterasjoner = int(iterasjon),
       mismatch    = [feil_P,feil_Q],
       konvergerte = konvergerte,
-      flow_in_line = np.array(None),
+      flow_in_line = flow_in_line(),
       pv_to_pq_generators = None,
-      power=np.array(None),
-      qower=np.array(None),
+      power = np.array([sum(flyt_P(i, j) for j in range(antall_busser)) for i in range(antall_busser)]),
+      qower = np.array([sum(flyt_Q(i, j) for j in range(antall_busser)) for i in range(antall_busser)]),
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 
