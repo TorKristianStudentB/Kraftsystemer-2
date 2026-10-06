@@ -4,7 +4,7 @@ from GridMaker.Imports import MakeGrid, Grid, np, validating,  lag_rapport, Path
 
 
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
-ExcelSheet = Path.cwd() / "Grid" / "Enkel_nett_teste_qmaxmin.xlsx"
+ExcelSheet = Path.cwd() / "Grid" / "test_trøndelagsnettet.xlsx"
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
 
 
@@ -17,8 +17,9 @@ if __name__ == "__main__":
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
    grid.loadflowsolutionNR()
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
-
+   
    #-----------------Lager rapport om løsningene----------------
    lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
    #-----------------Lager rapport om løsningene----------------
+
 #----------Main Running---------------
