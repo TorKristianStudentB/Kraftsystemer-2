@@ -21,4 +21,5 @@ if __name__ == "__main__":
    #-----------------Lager rapport om løsningene----------------
    lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
    #-----------------Lager rapport om løsningene----------------
+   
 #----------Main Running---------------
