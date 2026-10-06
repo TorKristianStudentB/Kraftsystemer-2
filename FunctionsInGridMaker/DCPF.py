@@ -63,7 +63,7 @@ def dc_power_flow(grid):
       P_reduced = P_scheduled[active_buses]
 
       #------------konverterer aktiv effekt til pu-----------------------------------------------
-      P_reduced_pu = P_reduced / grid.Base.Sbase
+      P_reduced_pu = P_reduced
 
       #-------------løser dc power flow og finner spenningsvinklen-------------------------------
       delta_reduced = np.linalg.solve(Y_dc_reduced, P_reduced_pu)
@@ -73,8 +73,12 @@ def dc_power_flow(grid):
 
          bus_index = active_buses[k]
          delta[bus_index] = delta_reduced[k]
+
+      return delta
+
    #------------finner busser som skal være med i beregningen, dvs ikke referansebussen-----------      
 
+   delta =busses_in_beregninen()
 
    #------------beregne aktiv effektflyt på linjene--------------- 
    def flow_in_line():
@@ -103,16 +107,25 @@ def dc_power_flow(grid):
 
    #-------------beregne nødvendig netto aktiv effekt fra slack bussen----------
    def netto_aktiv_effekt():
-     p_slack = 0 
-     for i in range(len(grid.bus)):
-        if busPVPQ[i] != "ref" and busPVPQ[i] != "alene":
-            p_slack = p_slack - P_scheduled[i]
+        p_slack = 0 
+        for i in range(len(grid.bus)):
+            if busPVPQ[i] != "ref" and busPVPQ[i] != "alene":
+                p_slack = p_slack - P_scheduled[i]
 
-     for i in range(len(grid.bus)):
-        grid.bus[i].Angle = delta[i]
+        for i in range(len(grid.bus)):
+            grid.bus[i].Angle = delta[i]
+        return p_slack
    #-------------beregne nødvendig netto aktiv effekt fra slack bussen----------
-   netto_aktiv_effekt()
+   p_slack = netto_aktiv_effekt()
 
+   #-------------Bygger formatering --------------------------------------------
+
+   power = P_scheduled.copy()
+   power[0] = p_slack                  # buss 0 er ref/slack
+   qower = np.zeros(len(grid.bus))     # DC-lastflyt har ingen Q
+
+
+   #-------------Bygger formatering --------------------------------------------
 
    #---------------Loader løsningen som et eget object under hovednettet-----------
    grid.solution = grid.__class__.Solution(
@@ -123,8 +136,8 @@ def dc_power_flow(grid):
          konvergerte = True,
          flow_in_line = np.array(line_flow),
          pv_to_pq_generators = None,
-         power=None,
-         qower=None,
+         power=power,
+         qower=qower,
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
    

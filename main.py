@@ -15,7 +15,7 @@ if __name__ == "__main__":
    #---------lager nettet til klassen grid fra excelarket-------
    
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
-   grid.loadflowsolutionNR()
+   grid.DCPF()
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
    
    #-----------------Lager rapport om løsningene----------------
