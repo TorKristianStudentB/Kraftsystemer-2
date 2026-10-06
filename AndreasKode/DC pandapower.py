@@ -1,4 +1,3 @@
-import pandas as pd
 import pandapower as pp
 import sys
 from pathlib import Path
@@ -14,7 +13,6 @@ Sbase = grid.Base.Sbase
 for b in grid.bus:
         print(b.busNumber, b.Name, b.Vbase, "kV", "P_gen=", b.P_gen * Sbase, "P_load=", b.P_load * Sbase)
 net = pp.create_empty_network(name="Trøndelag", sn_mva=Sbase)
-
 
 
 bus_id_map = {}
@@ -66,5 +64,4 @@ print(net.res_bus[["va_degree"]])
 print(net.res_line[["p_from_mw", "p_to_mw"]])#, "loading_percent"]])
                     
                 
-
-                    
+              
