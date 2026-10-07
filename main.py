@@ -14,12 +14,13 @@ if __name__ == "__main__":
    grid = MakeGrid(ExcelSheet)
    #---------lager nettet til klassen grid fra excelarket-------
    
-   #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
+   #---------Kjører lastflytanalyse med DCPF  metode- 
    grid.DCPF()
-   #---------Kjører lastflytanalyse med Newtons Rapshons metode-
-   
+
+   #---------Kjører lastflytanalyse med DCPF  metode-
+   grid.loadflowsolutionNR()
    #-----------------Lager rapport om løsningene----------------
-   lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
+   #lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
    #-----------------Lager rapport om løsningene----------------
 
 #----------Main Running---------------
