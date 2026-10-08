@@ -1,4 +1,5 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, pandapower_FDLF
+
 
 
 #----------Making grid class---------------
@@ -21,6 +22,9 @@ class Grid:
 
    def FDLF(self):
        return FDLF(self)
+
+   def pandapower_FDLF(self):
+       return pandapower_FDLF(self)
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
