@@ -407,7 +407,7 @@ def validating_PP_NR(grid):
       grid.solution = grid.__class__.Solution(
             volt=None,
             angle=None,
-            iterasjoner=0,
+            iterasjoner=None,
             mismatch=None,
             konvergerte=None,
             flow_in_line=None,
