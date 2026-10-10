@@ -1,4 +1,4 @@
-from GridMaker.Imports import MakeGrid, Path, pd
+from GridMaker.Imports import MakeGrid, Path, pd, validating_PP_NR, validating_PP_DC
 
 
 
@@ -48,14 +48,15 @@ if __name__ == "__main__":
 
    #----------vegard legger du inn--------------------
    #---------Kjører lastflytanalyse med pandapower NR metode- 
-   grid.validating_PP_NR()
+   validating_PP_NR(ExcelSheet)
    A_volt["PP_NR"] = grid.solution.volt
    A_angle["PP_NR"] = grid.solution.angle
    print("PP_NR til Vegard & Håkon: vellyket")
    #---------Kjører lastflytanalyse med pandapower NR metode-
 
+
    #---------Kjører lastflytanalyse med pandapower DC metode- 
-   grid.validating_PP_DC()
+   validating_PP_DC()
    A_volt["PP_DC"] = grid.solution.volt
    A_angle["PP_DC"] = grid.solution.angle
    print("PP_DC til Andreas: vellyket")

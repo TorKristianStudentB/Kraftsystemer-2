@@ -1,4 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, validating_PP_NR, validating_PP_DC
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
 
 
 #----------Making grid class---------------
@@ -21,11 +21,6 @@ class Grid:
 
    def FDLF(self):
        return FDLF(self)
-
-   def validating_PP_NR(self):
-       return validating_PP_NR(self)
-
-   def validating_PP_DC(self):
        return validating_PP_DC(self)
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 

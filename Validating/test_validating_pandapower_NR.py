@@ -1,6 +1,6 @@
 from GridMaker.Imports import pd,np,pp
 
-def validating_PP_NR(grid):
+def validating_PP_NR(grid,excel_file):
 
    #---------KONVERTER R OG X TIL P.U.------------------------
    def impedance_to_pu(r, x, vbase_kv, sbase_mva):
