@@ -12,8 +12,6 @@ def NewtonRaphson(grid):
         return Y,forste_gang 
    #-------oppstartm lage Y matrisen----------- 
    Y,forste_gang = oppstart()
-   #-------tilstand som huskes mellom iterasjonene: klemte=[[bussindeks, Q-grense], ...] for busser som har gått over ytelse (PV -> PQQ)
-   #       og Vsett=spenningen til bussene ved start (settpunktet en PV buss skal tilbake til)-------
    klemte=[]
    Vsett=[b.Volt for b in grid.bus]
    #-------tilstand som huskes mellom iterasjonene-------
@@ -341,8 +339,6 @@ def NewtonRaphson(grid):
 
 
    #-----------en klemt buss (PQQ) kan ha blitt klemt for tidlig, mens NR fortsatt var langt fra løsningen. Når vi har konvergert
-   #           slippes en buss klemt ved Qmax tilbake til PV hvis spenningen ligger OVER settpunktet, og en buss klemt ved Qmin
-   #           hvis spenningen ligger UNDER settpunktet. Returnerer indeksen i klemte, eller None-----------
    def Q_klemt_buss_skal_tilbake_til_PV():
        for k in range(len(klemte)):
             i=klemte[k][0]
