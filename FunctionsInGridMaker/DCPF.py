@@ -3,6 +3,14 @@ from GridMaker.Imports import np
 #-------------utfører DC power flow----------------
 def dc_power_flow(grid):
 
+   #-----------trafoens tapp i pu: ratio i excelarket er det FYSISKE spenningsforholdet (lav Vbase / høy Vbase), men bussene er
+   #           normalisert mot egen Vbase. En nominell trafo har derfor tapp 1.0 (samme normalisering som i admittansmatrise.py)-------
+   def ratio_pu(trafo):
+      vbase_fra = next(b.Vbase for b in grid.bus if b.busNumber == trafo.Frombus)
+      vbase_til = next(b.Vbase for b in grid.bus if b.busNumber == trafo.Tobus)
+      return trafo.ratio / (min(vbase_fra, vbase_til) / max(vbase_fra, vbase_til))
+   #-----------trafoens tapp i pu-------
+
 
    #-----------lager Y DC matrisen-------------
    def Y_convert():
@@ -16,7 +24,7 @@ def dc_power_flow(grid):
             raise ValueError("DC-lastflyt krever reaktans ulik null på alle grener")
         weight = 1 / branch.X
         if branch in grid.trafo:
-            weight *= branch.ratio
+            weight *= ratio_pu(branch)
         Y_dc[i, i] += weight
         Y_dc[j, j] += weight
         Y_dc[i, j] -= weight
@@ -125,7 +133,7 @@ def dc_power_flow(grid):
                from_bus = i
             if grid.bus[i].busNumber == trafo.Tobus:
                to_bus = i
-         P_ij = (delta[from_bus] - delta[to_bus]) * trafo.ratio / trafo.X
+         P_ij = (delta[from_bus] - delta[to_bus]) * ratio_pu(trafo) / trafo.X
          flow.append(P_ij * grid.Base.Sbase)
       return flow
 

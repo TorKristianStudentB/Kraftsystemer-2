@@ -1,4 +1,5 @@
-from GridMaker.Imports import pd,Grid 
+from GridMaker.Imports import pd
+from GridMaker.ClassGrid import Grid   # direkte, ikke via Imports (unngår sirkulær import)
 
 #---------Start: Funskjon som fyller inn i objektet grid fra excel arket n490--------
 def MakeGrid(ExcelSheet):

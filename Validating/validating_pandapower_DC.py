@@ -1,4 +1,5 @@
-from GridMaker.Imports import pp
+from GridMaker.Imports import pp,np,excelfilepath
+from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
 
 #--------------validerer med pandapower på DC--------------------
 def validating_PP_DC(grid):   
@@ -9,9 +10,6 @@ def validating_PP_DC(grid):
    region_lines = [l for l in grid.line if l.Frombus in region_bus_ids and l.Tobus in region_bus_ids]
    region_trafos = [t for t in grid.trafo if t.Frombus in region_bus_ids and t.Tobus in region_bus_ids]
 
-   #Filtrerer ut verdier for å lage en pandapower-nettverk
-   for b in region_buses:
-      print(b.busNumber, b.Name, b.Vbase, "kV", "P_gen=", b.P_gen , "P_load=", b.P_load)
 
    net = pp.create_empty_network(name="Nordic490 -NO3")
 
@@ -19,10 +17,11 @@ def validating_PP_DC(grid):
    for b in region_buses:
       pp_bus = pp.create_bus(net, vn_kv=b.Vbase, name=b.Name)
       bus_id_map[b.busNumber] = pp_bus
+      #----effekt ligger i pu i grid-objektet (MakeGrid deler på Sbase), pandapower vil ha MW -> ganger med Sbase----
       if b.P_load > 0:
-         pp.create_load(net, pp_bus, p_mw=b.P_load, q_mvar=b.Q_load)
+         pp.create_load(net, pp_bus, p_mw=b.P_load*grid.Base.Sbase, q_mvar=b.Q_load*grid.Base.Sbase)
       if b.P_gen > 0:
-         pp.create_sgen(net, pp_bus, p_mw=b.P_gen, q_mvar=b.Q_gen)
+         pp.create_sgen(net, pp_bus, p_mw=b.P_gen*grid.Base.Sbase, q_mvar=b.Q_gen*grid.Base.Sbase)
 
    Sbase = 100  # MVA, fra bus-arket
 
@@ -62,8 +61,6 @@ def validating_PP_DC(grid):
 
    pp.rundcpp(net)
 
-   print(net.res_bus[["va_degree"]])
-   print(net.res_line[["p_from_mw", "p_to_mw", "loading_percent"]])
 
 
 
@@ -75,19 +72,16 @@ def validating_PP_DC(grid):
 
    #---------------Loader løsningen som et eget object under hovednettet-----------
    grid.solution = grid.__class__.Solution(
-         volt=0,
-         angle=0,
+         volt=np.ones(len(net.res_bus[["va_degree"]])),
+         angle=np.radians(np.array(net.res_bus["va_degree"])),   # radianer, som NR, DC og FD
          iterasjoner=0,
          mismatch=None,
          konvergerte=0,
-         flow_in_line=None,
+         flow_in_line=np.array(net.res_line["p_from_mw"]),
          pv_to_pq_generators=None,
          power=None,
          qower=None,
          type="PP_DC"
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
-#--------------validerer med pandapower på DC--------------------                
-                  
-
-                     
+#--------------validerer med pandapower på DC--------------------                            

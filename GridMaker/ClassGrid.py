@@ -1,4 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, excelfilepath
 
 
 #----------Making grid class---------------
@@ -21,7 +21,14 @@ class Grid:
 
    def FDLF(self):
        return FDLF(self)
+
+   def validating_PP_DC(self):
+       from Validating.validating_pandapower_DC import validating_PP_DC   # lat import: valideringsfilene importerer selv GridMaker
        return validating_PP_DC(self)
+
+   def validating_PP_NR(self):
+       from Validating.validating_pandapower_NR import validating_PP_NR   # lat import (se over)
+       return validating_PP_NR(excelfilepath,self)
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):

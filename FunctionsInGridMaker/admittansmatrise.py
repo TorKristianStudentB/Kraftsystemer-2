@@ -33,10 +33,16 @@ def cutsem(grid):
 
    #------Start: Finner 2x2 matrisen på alle trafoene-----
    for k in grid.trafo:
-      if k.Type=='tap':
-         a=1/k.ratio #alle ratioene er <1, så lavest spenning er i teller
          i=konverter_identifikasjonummer(k.Frombus)
          j=konverter_identifikasjonummer(k.Tobus)
+
+         #----ratio i excelarket er det FYSISKE spenningsforholdet (lav Vbase / høy Vbase, f.eks. 132/380=0.347).
+         #    Bussene er allerede normalisert mot egen Vbase, og da skal en nominell trafo ha tapp 1.0 i pu.
+         #    Tappen i pu er derfor ratio delt på det nominelle forholdet (nominell trafo -> ratio_pu=1.0)----
+         v_lav=min(grid.bus[i].Vbase, grid.bus[j].Vbase)
+         v_hoy=max(grid.bus[i].Vbase, grid.bus[j].Vbase)
+         ratio_pu=k.ratio/(v_lav/v_hoy)
+         a=1/ratio_pu #a=1 for nominell trafo
          yij=k.admittans()
 
          if grid.bus[i].Vbase>=grid.bus[j].Vbase:
@@ -68,3 +74,4 @@ def cutsem(grid):
 
    return Y
 #-----------------cutsem algoritmen utført utifra powerpoint til foreleseren------------
+
