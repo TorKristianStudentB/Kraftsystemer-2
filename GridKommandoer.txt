@@ -16,54 +16,77 @@ Objektstruktur
    │           ├── .Name     -> str,   trafostasjon-navn (OBS: stor N = navnet)
    │           ├── .Volt     -> float, spenning [p.u.]
    │           ├── .Angle    -> float, vinkel [rad]
-   │           ├── .P_gen    -> float
-   │           ├── .Q_gen    -> float
-   │           ├── .P_load   -> float
-   │           ├── .Q_load   -> float
+   │           ├── .P_gen    -> float, [p.u.]  (MakeGrid deler MW på Sbase)
+   │           ├── .Q_gen    -> float, [p.u.]
+   │           ├── .P_load   -> float, [p.u.]
+   │           ├── .Q_load   -> float, [p.u.]
    │           ├── .bidz     -> str,   budområde (f.eks. "NO1")
-   │           └── .Vbase    -> float, spenningsnivå [kV]
+   │           ├── .Vbase    -> float, spenningsnivå [kV]
+   │           ├── .V_max    -> float eller None (None hvis kolonnen "Vmax" mangler i excel)
+   │           ├── .V_min    -> float eller None
+   │           ├── .eic_code -> str eller None (None hvis kolonnen "eic code" mangler)
+   │           ├── .kodens_identifikasjonssystem -> int, 0-basert indeks (= plassen i grid.bus,
+   │           │                                     brukes som rad/kolonne i Y-matrisen)
+   │           ├── .cords    -> [lat, lon] eller None
+   │           └── .place    -> [x, y] eller None
    │
    ├── .line                 -> liste med line-objekter
    │      └── [lineindeks]
    │           ├── .lineNumber   -> int
    │           ├── .Name         -> str, "bussfra – busstil"
-   │           ├── .R            -> float
-   │           ├── .X            -> float
-   │           ├── .B            -> float
-   │           ├── .Frombus      -> int
-   │           ├── .Tobus        -> int
+   │           ├── .R            -> float, [p.u.]  (excel står i ohm, MakeGrid deler på Zbase)
+   │           ├── .X            -> float, [p.u.]
+   │           ├── .B            -> float, shunt-suseptans (leses urørt fra excel)
+   │           ├── .Frombus      -> int, bus-id (busNumber), IKKE indeks
+   │           ├── .Tobus        -> int, bus-id (busNumber), IKKE indeks
    │           ├── .lenght       -> float, lengde [m]
+   │           ├── .eic_code     -> str eller None
    │           └── .admittans()  -> complex, 1/(R+jX)
    │
    ├── .trafo                -> liste med trafo-objekter
    │      └── [trafoindeks]
    │           ├── .Name         -> str
    │           ├── .Type         -> str  ("tap")
-   │           ├── .ratio        -> float ("tror ikke denne stemmer")
-   │           ├── .Frombus      -> int
-   │           ├── .Tobus        -> int
-   │           ├── .R            -> float
-   │           ├── .X            -> float
+   │           ├── .ratio        -> float, FYSISK spenningsforhold = lav Vbase / høy Vbase
+   │           │                    (f.eks. 132/380 = 0.347). Tappen i pu er ratio delt på dette
+   │           │                    forholdet, se avsnitt 12.
+   │           ├── .Frombus      -> int, bus-id (busNumber)
+   │           ├── .Tobus        -> int, bus-id (busNumber)
+   │           ├── .R            -> float, [p.u.]  (står allerede i pu i excel, ingen omregning)
+   │           ├── .X            -> float, [p.u.]
+   │           ├── .eic_code     -> str eller None
    │           └── .admittans()  -> complex, 1/(R+jX)
    │
    ├── .gen                  -> liste med gen-objekter
    │      └── [genindeks]
    │           ├── .name         -> str,   generatornavn
-   │           ├── .bus          -> float, buss-id generatoren står på
-   │           ├── .P_max        -> int,   Pmax
-   │           ├── .Q_max        -> float, Qmax (test)
-   │           └── .Q_min        -> float, Qmin (test)
+   │           ├── .bus          -> float, bus-id (busNumber) generatoren står på
+   │           ├── .P_max        -> int,   Pmax [MW]
+   │           ├── .Q_max        -> float eller None, Qmax [p.u.]  (brukes av NR, se avsnitt 11)
+   │           ├── .Q_min        -> float eller None, Qmin [p.u.]
+   │           └── .eic_code     -> str eller None
+   │           (flere generatorer kan stå på samme buss; NR summerer Q_max/Q_min per buss)
    │
-   ├── .solution                  -> [] til nettet er løst, ellers Solution-objekt
-   │      ├── .volt               -> liste, konvergerte spenninger [p.u.]
-   │      ├── .angle              -> liste, konvergerte vinkler [rad]
-   │      ├── .iterasjoner        -> int,   antall NR-iterasjoner
-   │      ├── .mismatch           -> siste dP/dQ-vektor (deltaPQ)
-   │      └── .konvergerte        -> bool,  True hvis løsningen konvergerte
+   ├── .solution                  -> None til nettet er løst, ellers Solution-objekt
+   │      ├── .volt               -> array, spenninger [p.u.] (en per buss)
+   │      ├── .angle              -> array, vinkler [rad]     (en per buss)
+   │      ├── .iterasjoner        -> int,   antall iterasjoner (NR: Newton-steg)
+   │      ├── .mismatch           -> siste feilvektor (se avsnitt 10)
+   │      ├── .konvergerte        -> bool,  True hvis løsningen konvergerte
+   │      ├── .flow_in_line       -> array, effektflyt per linje (NR/FD: kompleks [p.u.], fra-enden;
+   │      │                          DC: reell [MW])
+   │      ├── .pv_to_pq_generators-> liste med generatornavn som ble klemt (PV -> PQ), kun NR
+   │      ├── .power              -> array, netto P-injeksjon per buss [p.u.] (inkl. slack)
+   │      ├── .qower              -> array, netto Q-injeksjon per buss [p.u.] (DC: nuller)
+   │      └── .type               -> str, "NR", "DC", "FD", "PP_NR" eller "PP_DC"
    │
-   ├── .thevenin(bus1, bus2)      -> Thevenin-impedans mellom to busser
-   ├── .admittansmatrise()        -> Y-buss-matrise (cutsem)
-   └── .loadflowsolutionNR()      -> løser lastflyt (NR) på en kopi, gir løst nett
+   ├── .thevenin(bus1, bus2)      -> Thevenin-impedans mellom to busser (se avsnitt 13)
+   ├── .admittansmatrise()        -> Y-buss-matrise (cutsem), complex (N x N)
+   ├── .loadflowsolutionNR()      -> lastflyt, Newton-Raphson (med Q-grenser)
+   ├── .DCPF()                    -> lastflyt, DC (kun aktiv effekt og vinkler)
+   ├── .FDLF()                    -> lastflyt, fast decoupled
+   ├── .validating_PP_NR()        -> kjører samme nett i pandapower (AC), lagrer i grid.solution
+   └── .validating_PP_DC()        -> kjører samme nett i pandapower (DC), lagrer i grid.solution
 
 
 ------------------------------------------------------------------------------
@@ -78,6 +101,10 @@ len(grid.line)              # antall linjer
 len(grid.trafo)             # antall trafoer
 len(grid.gen)               # antall generatorer
 
+# Laste inn nettet fra excel (path, ikke ferdig innlest DataFrame):
+from GridMaker.Imports import MakeGrid, excelfilepath
+grid = MakeGrid(excelfilepath)
+
 
 ------------------------------------------------------------------------------
  2) BASEVERDIER
@@ -87,12 +114,16 @@ grid.Base.Sbase             # S_base [MVA]
 grid.Base.Vbase             # V_base
 vars(grid.Base)             # begge baseverdiene som dict
 
+# Enheter: alt som er effekt (P/Q i bus og gen) og impedans (R/X) ligger i p.u.
+# i grid-objektet. Gang med Sbase for MW/MVAr:
+grid.bus[1].P_load * grid.Base.Sbase     # last i MW
+
 
 ------------------------------------------------------------------------------
  3) BUSSER (liste -> bruk [ ] indeks)
 ------------------------------------------------------------------------------
 grid.bus                    # hele lista med bus-objekter
-grid.bus[0]                 # første buss
+grid.bus[0]                 # første buss (referansebussen/slack i NR, DC og FD)
 grid.bus[-1]                # siste buss
 grid.bus[2]                 # tredje buss
 
@@ -101,12 +132,18 @@ grid.bus[0].busNumber       # bus-id (tallet)
 grid.bus[0].Name            # trafostasjon-navn
 grid.bus[0].Volt            # spenning [p.u.]
 grid.bus[0].Angle           # vinkel [rad]
-grid.bus[0].P_gen
+grid.bus[0].P_gen           # [p.u.]
 grid.bus[0].Q_gen
 grid.bus[0].P_load
 grid.bus[0].Q_load
 grid.bus[0].bidz            # budområde
 grid.bus[0].Vbase           # spenningsnivå [kV]
+grid.bus[0].V_max           # None hvis ikke i excel
+grid.bus[0].V_min
+grid.bus[0].eic_code        # None hvis ikke i excel
+grid.bus[0].kodens_identifikasjonssystem   # indeksen i Y-matrisen
+grid.bus[0].cords           # [lat, lon] eller None
+grid.bus[0].place           # [x, y] eller None
 vars(grid.bus[0])           # alt om buss 0 som dict
 
 # Gå gjennom alle busser:
@@ -128,12 +165,13 @@ grid.line[-1]               # siste linje
 # Attributter for én linje:
 grid.line[0].lineNumber
 grid.line[0].Name           # "bussfra – busstil"
-grid.line[0].R
-grid.line[0].X
+grid.line[0].R              # [p.u.]
+grid.line[0].X              # [p.u.]
 grid.line[0].B
-grid.line[0].Frombus
+grid.line[0].Frombus        # bus-id (busNumber)
 grid.line[0].Tobus
 grid.line[0].lenght         # lengde [m]
+grid.line[0].eic_code       # None hvis ikke i excel
 grid.line[0].admittans()    # 1/(R+jX)  (komplekst)
 vars(grid.line[0])          # alt om linje 0 som dict
 
@@ -151,11 +189,12 @@ grid.trafo[0]               # første trafo
 # Attributter for én trafo:
 grid.trafo[0].Name
 grid.trafo[0].Type          # "tap"
-grid.trafo[0].ratio
+grid.trafo[0].ratio         # FYSISK forhold lav/høy Vbase, f.eks. 0.347 for 132/380 kV
 grid.trafo[0].Frombus
 grid.trafo[0].Tobus
-grid.trafo[0].R
-grid.trafo[0].X
+grid.trafo[0].R             # [p.u.]
+grid.trafo[0].X             # [p.u.]
+grid.trafo[0].eic_code
 grid.trafo[0].admittans()   # 1/(R+jX)  (komplekst)
 vars(grid.trafo[0])         # alt om trafo 0 som dict
 
@@ -172,15 +211,27 @@ grid.gen[0]                 # første generator
 
 # Attributter for én generator:
 grid.gen[0].name            # generatornavn
-grid.gen[0].bus             # buss-id generatoren står på
-grid.gen[0].P_max           # Pmax
-grid.gen[0].Q_max           # Qmax (test)
-grid.gen[0].Q_min           # Qmin (test)
+grid.gen[0].bus             # bus-id generatoren står på
+grid.gen[0].P_max           # Pmax [MW]
+grid.gen[0].Q_max           # Qmax [p.u.], brukes av NR som Q-grense
+grid.gen[0].Q_min           # Qmin [p.u.]
+grid.gen[0].eic_code
 vars(grid.gen[0])           # alt om generator 0 som dict
 
 # Gå gjennom alle generatorer:
 for g in grid.gen:
-    print(g.name, "bus", g.bus, "Pmax=", g.P_max)
+    print(g.name, "bus", g.bus, "Pmax=", g.P_max, "Qmax=", g.Q_max, "Qmin=", g.Q_min)
+
+# Antall generatorer pr. buss (flere kan stå på samme buss):
+from collections import Counter
+Counter(g.bus for g in grid.gen)
+
+# Samlet Q-grense pr. buss (det NR sammenligner mot), i MVAr:
+from collections import defaultdict
+qmax = defaultdict(float)
+for g in grid.gen:
+    qmax[g.bus] += g.Q_max * grid.Base.Sbase
+dict(qmax)
 
 
 ------------------------------------------------------------------------------
@@ -210,11 +261,14 @@ next(b for b in grid.bus if b.busNumber == 3)
 # Alle generatorer på buss 0:
 [g.name for g in grid.gen if g.bus == 0]
 
-# Total last i nettet:
-sum(b.P_load for b in grid.bus)
+# Total last i nettet [MW]:
+sum(b.P_load for b in grid.bus) * grid.Base.Sbase
 
-# Total generering i nettet:
-sum(b.P_gen for b in grid.bus)
+# Total generering i nettet [MW]:
+sum(b.P_gen for b in grid.bus) * grid.Base.Sbase
+
+# Laveste og høyeste spenning i nettet:
+min(b.Volt for b in grid.bus), max(b.Volt for b in grid.bus)
 
 
 ------------------------------------------------------------------------------
@@ -238,7 +292,7 @@ pd.DataFrame([vars(g) for g in grid.gen])
 ------------------------------------------------------------------------------
  9) .iloc GJELDER RÅDATAEN (df), IKKE grid-objektet
 ------------------------------------------------------------------------------
-# df er en dict av DataFrames (fra read_xlsx):
+# df er en dict av DataFrames (fra pd.read_excel(..., sheet_name=None)):
 df.keys()                   # hvilke ark finnes ("bus", "line", "trafo", "gen", ...)
 df["bus"]                   # hele bus-tabellen
 df["bus"].iloc[0]           # første rad
@@ -248,23 +302,157 @@ df["bus"]["V [P.U]"].iloc[0]   # verdi i rad 0
 df["line"].iloc[0]          # første linjerad
 df["trafo"].iloc[0]         # første traforad
 df["gen"].iloc[0]           # første generatorrad
-df["bus"].columns           # kolonnenavn
+df["bus"].columns           # kolonnenavn (OBS: "S_base [MVA] " har mellomrom på slutten)
 df["bus"].head()            # de første radene
+# Rådataen har effekt i MW/MVAr og linje-R/X i ohm; grid-objektet har pu (se avsnitt 2).
 
 
 ------------------------------------------------------------------------------
- 10) LASTFLYT / LØSNING (Newton-Raphson)
+ 10) LASTFLYT / LØSNING (NR, DC og FD)
 ------------------------------------------------------------------------------
-grid.solution               # [] så lenge nettet ikke er løst
-grid.loadflowsolutionNR()   # løser lastflyt på en KOPI, returnerer løst nett
-                            # (originalen 'grid' forblir urørt)
+grid.solution               # None så lenge nettet ikke er løst
 
-# Fang det løste nettet og les løsningen:
-løst = grid.loadflowsolutionNR()
-løst.solution.volt          # konvergerte spenninger [p.u.]
-løst.solution.angle         # konvergerte vinkler [rad]
-løst.solution.iterasjoner   # antall NR-iterasjoner
-løst.solution.mismatch      # siste dP/dQ-vektor
-løst.solution.konvergerte   # True hvis den konvergerte
-vars(løst.solution)         # hele løsningen som dict
+# VIKTIG: alle tre metodene løser PÅ SELVE grid-objektet. De oppdaterer grid.bus[i].Volt
+# og .Angle og lagrer resultatet i grid.solution. De lager ingen kopi.
+# Kjører du flere metoder etter hverandre på samme objekt, starter hver av dem fra det
+# forrige resultatet (og DC returnerer bare Volt slik den lå). Lag derfor et nytt objekt
+# for hver metode hvis metodene skal sammenlignes uavhengig av hverandre:
+g_nr = MakeGrid(excelfilepath); g_nr.loadflowsolutionNR()
+g_dc = MakeGrid(excelfilepath); g_dc.DCPF()
+g_fd = MakeGrid(excelfilepath); g_fd.FDLF()
+
+# --- Newton-Raphson (type "NR") ---
+grid.loadflowsolutionNR()   # returnerer grid (samme objekt), setter grid.solution
+grid.solution.volt          # spenninger [p.u.]
+grid.solution.angle         # vinkler [rad]
+grid.solution.iterasjoner   # antall Newton-steg
+grid.solution.konvergerte   # True hvis den konvergerte
+grid.solution.mismatch      # siste dP/dQ-vektor: dP for PV- og PQ-busser, dQ for PQ-busser
+grid.solution.flow_in_line  # kompleks effekt per linje [p.u.], fra-enden (P = real, Q = imag)
+grid.solution.flow_in_line * grid.Base.Sbase    # i MW + j MVAr
+grid.solution.power         # netto P-injeksjon per buss [p.u.]; element 0 er slack
+grid.solution.qower         # netto Q-injeksjon per buss [p.u.]
+grid.solution.pv_to_pq_generators   # generatorer (navn) som ble klemt på Q-grensen
+vars(grid.solution)         # hele løsningen som dict
+
+# --- DC-lastflyt (type "DC") ---
+grid.DCPF()                 # returnerer grid, setter grid.solution
+grid.solution.angle         # vinkler [rad]
+grid.solution.volt          # IKKE regnet ut: bare Volt slik den lå i grid.bus (1.0 for nytt nett)
+grid.solution.flow_in_line  # AKTIV effekt per linje i MW (reell, ikke pu)
+grid.solution.power         # netto P per buss [p.u.], element 0 er slack
+grid.solution.qower         # nuller (DC regner ikke Q)
+grid.solution.iterasjoner   # alltid 1
+grid.solution.mismatch      # P-feil i pu for busser som ble løst (skal være ~0)
+
+# --- Fast decoupled (type "FD") ---
+grid.FDLF()                 # returnerer None (setter bare grid.solution)
+grid.solution.volt          # spenninger [p.u.]
+grid.solution.angle         # vinkler [rad]
+grid.solution.iterasjoner   # antall FD-iterasjoner
+grid.solution.mismatch      # [feil_P, feil_Q], to lister (en verdi per buss)
+grid.solution.flow_in_line  # kompleks effekt per linje [p.u.]
+grid.solution.power         # P per buss [p.u.]
+grid.solution.qower         # Q per buss [p.u.]
+# FD har INGEN Q-grenser (ingen PV -> PQ), så Q kan avvike fra NR når generatorer er klemt i NR.
+
+# Hvilken metode ble kjørt sist?
+grid.solution.type          # "NR", "DC", "FD", "PP_NR" eller "PP_DC"
+
+
+------------------------------------------------------------------------------
+ 11) Q-GRENSER OG PV -> PQ (klemming) I NR
+------------------------------------------------------------------------------
+# Bussklasser i NR:  "ref" (bus 0) | "PV" (har generator) | "PQ" (ingen generator)
+#                    "alene" (ingen forbindelse, hoppes over)
+#                    "PQQ" (PV-buss som er klemt på Q-grensen; regnes som PQ i Jacobi)
+
+# Regler:
+#  - Hver iterasjon sjekkes hver PV-buss: bussens samlede generator-Q  (= netto Q-injeksjon + Q_load)
+#    sammenlignes mot SUMMEN av Q_max og Q_min for generatorene på bussen.
+#  - Brytes grensen, klemmes bussen (PQQ): Q settes til grensen, spenningen blir en ukjent.
+#    Én buss klemmes om gangen, og alt regnes på nytt med den nye inndelingen.
+#  - Når NR har konvergert, sjekkes de klemte bussene: klemt ved Qmax slippes tilbake til PV hvis
+#    spenningen er OVER startspenningen (settpunktet); klemt ved Qmin hvis den er UNDER.
+#    (en buss kan ha blitt klemt for tidlig mens NR var langt fra løsningen)
+#  - Generatorer uten Q_max/Q_min (None) gir ingen grense for bussen.
+
+# Se hva som ble klemt:
+grid.solution.pv_to_pq_generators
+len(grid.solution.pv_to_pq_generators)
+
+# Kontroller Q for generatorbusser etter løsning [MVAr] (generatorens Q = netto Q + Q_load):
+for i, b in enumerate(grid.bus):
+    q_gen = (grid.solution.qower[i] + b.Q_load) * grid.Base.Sbase
+    print(b.busNumber, round(q_gen, 2))
+
+
+------------------------------------------------------------------------------
+ 12) TRAFOER I Y-MATRISEN (tapp i pu)
+------------------------------------------------------------------------------
+# trafo.ratio i excel er det FYSISKE spenningsforholdet (lav Vbase / høy Vbase, f.eks. 132/380 = 0.347).
+# Bussene er allerede normalisert mot egen Vbase, så en NOMINELL trafo har tapp 1.0 i pu.
+# cutsem (admittansmatrise.py) og DCPF regner derfor:
+#       ratio_pu = ratio / (lavVbase / høyVbase)         # nominell trafo gir 1.0
+#       a = 1 / ratio_pu
+# Uten denne normaliseringen blir trafoen feil modellert, og spenningene havner på ca. 0.6 - 1.3 pu.
+
+# Sjekk tappen i pu for alle trafoer:
+for t in grid.trafo:
+    vf = next(b.Vbase for b in grid.bus if b.busNumber == t.Frombus)
+    vt = next(b.Vbase for b in grid.bus if b.busNumber == t.Tobus)
+    print(t.Name, t.ratio / (min(vf, vt) / max(vf, vt)))
+
+# Y-matrisen:
+Y = grid.admittansmatrise()
+Y.shape                     # (N, N), N = antall busser
+Y[0, 1]                     # element mellom bussindeks 0 og 1
+
+
+------------------------------------------------------------------------------
+ 13) THEVENIN
+------------------------------------------------------------------------------
+# Zth regnes med din egen algoritme (serie / parallell / stjerne-masketransformasjon) på LINJENE
+# (trafoer er ikke med). bus1 og bus2 er bus-id (busNumber), ikke indeks.
+from FunctionsInGridMaker.theveninZth import theveninZth
+Zth = theveninZth(grid, 30, 45)          # kompleks impedans [p.u.]
+Zth * grid.Base.Vbase**2 / grid.Base.Sbase    # i ohm (hvis alle busser har samme Vbase)
+
+# grid.thevenin(bus1, bus2) kjører NR og returnerer en tekststreng "Zth=... og Vth=...".
+# OBS: metoden i ClassGrid.py bruker den GLOBALE variabelen "grid" (ikke self) og buss 1 og 2
+# i Vth-delen, så den virker bare når objektet heter "grid" i hovedprogrammet.
+# Sjekk med Z-matrisen (Zth_ij = Zii + Zjj - 2*Zij):
+import numpy as np
+Y = grid.admittansmatrise()
+
+
+------------------------------------------------------------------------------
+ 14) VALIDERING MOT PANDAPOWER
+------------------------------------------------------------------------------
+grid.validating_PP_NR()     # bygger samme nett i pandapower (AC, med Q-grenser) og kjører runpp
+grid.solution.type          # "PP_NR"
+grid.solution.volt          # spenninger [p.u.]
+grid.solution.angle         # vinkler [rad]   (konvertert fra grader)
+grid.solution.power         # P per buss [MW]   (OBS: MW, ikke pu)
+grid.solution.qower         # Q per buss [MVAr]
+
+grid.validating_PP_DC()     # samme nett, pandapower DC (rundcpp)
+grid.solution.type          # "PP_DC"
+grid.solution.volt          # alle 1.0 (DC regner ikke spenning)
+grid.solution.angle         # vinkler [rad]
+grid.solution.flow_in_line  # aktiv effekt per linje [MW]
+
+# Sammenligne metodene (hver på sitt eget objekt!) i en tabell:
+import numpy as np, pandas as pd
+res = {}
+for navn, kall in [("NR", "loadflowsolutionNR"), ("DC", "DCPF"), ("FD", "FDLF"),
+                   ("PP_NR", "validating_PP_NR"), ("PP_DC", "validating_PP_DC")]:
+    g = MakeGrid(excelfilepath)
+    getattr(g, kall)()
+    res[navn] = (np.array(g.solution.volt, dtype=float), np.array(g.solution.angle, dtype=float))
+pd.DataFrame({n: v[0] for n, v in res.items()})       # spenning
+pd.DataFrame({n: v[1] for n, v in res.items()})       # vinkel [rad]
+# Forventet (Trøndelagsnettet): NR og PP_NR er nesten like (ca. 3e-5 i spenning). FD avviker opptil
+# ca. 4e-4 i spenning og 1e-4 rad i vinkel fordi FD ikke har Q-grenser. DC og PP_DC er like
+# (DC bruker ikke spenning, så DC- og FD-spenningene viser bare det som lå i grid.bus).
 ==============================================================================

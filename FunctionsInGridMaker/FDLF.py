@@ -222,10 +222,10 @@ def FDLF(grid):
 
 
    # ========== 11) Resultat ==========
-   print("Konvergerte:", konvergerte)
-   print("Antall iterasjoner:", iterasjon)
-   for b in grid.bus:
-      print(f"buss {b.busNumber:4d}  V={b.Volt:.4f} pu   vinkel={b.Angle:.4f} rad")
+   #print("Konvergerte:", konvergerte)
+   #print("Antall iterasjoner:", iterasjon)
+   #for b in grid.bus:
+      #print(f"buss {b.busNumber:4d}  V={b.Volt:.4f} pu   vinkel={b.Angle:.4f} rad")
 
    # ========== flow_in_line  =====
 
@@ -251,8 +251,8 @@ def FDLF(grid):
       pv_to_pq_generators = None,
       power = np.array([sum(flyt_P(i, j) for j in range(antall_busser)) for i in range(antall_busser)]),
       qower = np.array([sum(flyt_Q(i, j) for j in range(antall_busser)) for i in range(antall_busser)]),
+      type ="FD"
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
-
 #-------------Fast decoupled load flow kode---------------
    
