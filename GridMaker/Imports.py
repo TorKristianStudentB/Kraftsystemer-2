@@ -1,6 +1,11 @@
-#--------------her legges alle funksjonene og bibliotekene som brukes-----------
-import os
+#------------nettet som brukes fra excelarket---------------
 from pathlib import Path
+import os
+NameExcelFile="test_trøndelagsnettet.xlsx"
+excelfilepath = (Path(os.getcwd())) / "Grid" / NameExcelFile
+#------------nettet som brukes fra excelarket---------------
+
+#--------------her legges alle funksjonene og bibliotekene som brukes-----------
 import pandas as pd
 import random
 import sys
@@ -14,12 +19,11 @@ from FunctionsInGridMaker.DCPF import dc_power_flow
 from FunctionsInGridMaker.pandapower_FDLF import pandapower_FDLF
 from GridMaker.ClassGrid import Grid
 from GridMaker.ReadExcelGrid import MakeGrid
+from Validating.validating_pandapower_DC import validating_PP_DC
+from Validating.validating_pandapower_NR import validating_PP_NR
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from datetime import datetime
 from matplotlib.patches import Rectangle, FancyBboxPatch, Circle
 from matplotlib.lines import Line2D
-from GridMaker.Visualisering_og_rapport import lag_rapport
-from Validating.Validating_pandapower import validating
-
 #--------------her legges alle funksjonene og bibliotekene som brukes-----------

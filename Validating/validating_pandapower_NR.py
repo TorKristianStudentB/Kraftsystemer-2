@@ -1,7 +1,9 @@
-from GridMaker.Imports import pd,np,pp
+from GridMaker.Imports import pd,np,pp,excelfilepath
+from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
 
-def validating(grid,Excelark,IMPEDANCE_UNIT):
-
+#---------------validerer nettet med pandapower--------------
+def validating_PP_NR(excel_file,grid):
+   IMPEDANCE_UNIT="ohm"   # linjenes R og X står i ohm i excelarket (trafoenes R og X står allerede i pu)
    #---------KONVERTER R OG X TIL P.U.------------------------
    def impedance_to_pu(r, x, vbase_kv, sbase_mva):
 
@@ -28,44 +30,33 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
          )
    #---------KONVERTER R OG X TIL P.U.------------------------
 
+
    #---------HOVEDFUNKSJON-----------------------------------
    def run_excel_with_pandapower(excel_file):
 
-      print("Starter programmet")
 
       # --------------------------------------------------
       # 1. Les Excel
       # --------------------------------------------------
 
-      print("Leser Excel-fil...")
 
       df = pd.read_excel(
          excel_file,
          sheet_name=None
       )
 
-      print("Excel-fil lest inn")
-      print("Ark i filen:", df.keys())
-
       bus_df = df["bus"]
       line_df = df["line"]
       gen_df = df["gen"]
       trafo_df = df["trafo"]
 
-      print("Antall busser:", len(bus_df))
-      print("Antall linjer:", len(line_df))
-      print("Antall generatorer i gen-arket:", len(gen_df))
-      print("Antall transformatorer:", len(trafo_df))
-
-
       # --------------------------------------------------
       # 2. Les systembase fra Excel
       # --------------------------------------------------
 
-      print("\nLeser systembase...")
 
       sbase_values = (
-         bus_df["S_base [MVA]"]
+         bus_df["S_base [MVA] "]
          .dropna()
          .unique()
       )
@@ -82,27 +73,18 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
 
       SBASE_MVA = float(sbase_values[0])
 
-      print("Systembase:", SBASE_MVA, "MVA")
-
-
       # --------------------------------------------------
       # 3. Lag tomt pandapower-nett
       # --------------------------------------------------
-
-      print("\nLager tomt pandapower-nett...")
 
       net = pp.create_empty_network(
          sn_mva=SBASE_MVA
       )
 
-      print("Tomt pandapower-nett opprettet")
-
 
       # --------------------------------------------------
       # 4. Lag busser
       # --------------------------------------------------
-
-      print("\nOppretter busser...")
 
       bus_map = {}
 
@@ -118,15 +100,10 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
 
          bus_map[bus_number] = pp_bus
 
-      print("Busser ferdig opprettet")
-      print("Antall busser i pandapower:", len(net.bus))
-
 
       # --------------------------------------------------
       # 5. Lag laster
       # --------------------------------------------------
-
-      print("\nOppretter laster...")
 
       for _, row in bus_df.iterrows():
 
@@ -145,15 +122,19 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
                   name=f"Load bus {bus_number}"
                )
 
-      print("Laster ferdig opprettet")
-      print("Antall laster:", len(net.load))
-
 
       # --------------------------------------------------
       # 6. Slack + generatorer
       # --------------------------------------------------
 
-      print("\nOppretter slack og generatorer...")
+
+      #----Q-grenser pr. buss (summen av generatorene på bussen), samme som i NR-koden----
+      q_grenser = {}
+      if "Qmax" in gen_df.columns and "Qmin" in gen_df.columns:
+         for _, g_row in gen_df.iterrows():
+            b_nr = int(g_row["bus"])
+            q_max, q_min = q_grenser.get(b_nr, (0.0, 0.0))
+            q_grenser[b_nr] = (q_max + float(g_row["Qmax"]), q_min + float(g_row["Qmin"]))
 
       slack_created = False
 
@@ -181,7 +162,7 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
                   name=f"Slack bus {bus_number}"
                )
 
-               print("Slack-buss:", bus_number)
+
 
                slack_created = True
 
@@ -193,19 +174,16 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
                   bus=bus_map[bus_number],
                   p_mw=p_gen,
                   vm_pu=vm_pu,
+                  max_q_mvar=q_grenser[bus_number][0] if bus_number in q_grenser else np.nan,
+                  min_q_mvar=q_grenser[bus_number][1] if bus_number in q_grenser else np.nan,
                   name=f"Generator bus {bus_number}"
                )
-
-      print("Generatorer ferdig opprettet")
-      print("Antall PV-generatorer:", len(net.gen))
 
 
       # --------------------------------------------------
       # 7. Lag linjer
       # --------------------------------------------------
 
-      print("\nOppretter linjer...")
-      print("Impedansenhet:", IMPEDANCE_UNIT)
 
       for _, row in line_df.iterrows():
 
@@ -238,15 +216,11 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
                name=row["name"]
          )
 
-      print("Linjer ferdig opprettet")
-      print("Antall linjeimpedanser:", len(net.impedance))
 
 
       # --------------------------------------------------
       # 8. Lag transformatorer
       # --------------------------------------------------
-
-      print("\nOppretter transformatorer...")
 
       for _, row in trafo_df.iterrows():
 
@@ -290,12 +264,8 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
 
 
          # Konverter trafoimpedans
-         r_pu, x_pu = impedance_to_pu(
-               row["R"],
-               row["X"],
-               vn_hv_kv,
-               SBASE_MVA
-         )
+         #----trafoenes R og X står allerede i pu i excelarket (MakeGrid konverterer dem heller ikke), så de brukes direkte----
+         r_pu, x_pu = float(row["R"]), float(row["X"])
 
          z_pu = np.sqrt(
                r_pu**2 + x_pu**2
@@ -327,49 +297,28 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
                name=row["name"]
          )
 
-      print("Transformatorer ferdig opprettet")
-      print("Antall transformatorer:", len(net.trafo))
-
-
-      # --------------------------------------------------
-      # 9. Kontroller nettet
-      # --------------------------------------------------
-
-      print("\nNettet er bygget:")
-      print("Busser:", len(net.bus))
-      print("Laster:", len(net.load))
-      print("Generatorer:", len(net.gen))
-      print("Slack:", len(net.ext_grid))
-      print("Linjer/impedanser:", len(net.impedance))
-      print("Transformatorer:", len(net.trafo))
 
 
       # --------------------------------------------------
       # 10. Kjør Newton-Raphson
       # --------------------------------------------------
 
-      print("\nStarter Newton-Raphson...")
-
       pp.runpp(
          net,
          algorithm="nr",
          init="flat",
          calculate_voltage_angles=True,
+         enforce_q_lims=True,
+         max_iteration=100,
          numba=False
       )
 
-      print("Newton-Raphson ferdig")
+
 
 
       # --------------------------------------------------
       # 11. Resultater
       # --------------------------------------------------
-
-      print("\n======================================")
-      print("RESULTATER")
-      print("======================================")
-
-      print("\nKonvergert:", net.converged)
 
       results = net.res_bus[
          [
@@ -394,20 +343,25 @@ def validating(grid,Excelark,IMPEDANCE_UNIT):
          ]
       )
 
-      print("\nBus-resultater:")
-      print(results)
+      #------------------------------------------------
+      #------------------------------------------------
+      # FYLL INN DENNE UNDER; SÅ SKAL KODEN FUNGERE :)
+      #------------------------------------------------
+      #------------------------------------------------
 
       #---------------Loader løsningen som et eget object under hovednettet-----------
       grid.solution = grid.__class__.Solution(
             volt=np.array(results["vm_pu"]),
-            angle=np.radians(np.array(results["va_degree"])),
-            iterasjoner=0,
+            angle=np.radians(np.array(results["va_degree"])),   # radianer, som NR, DC og FD
+            iterasjoner=None,
             mismatch=None,
-            konvergerte=net.converged,
+            konvergerte=None,
             flow_in_line=None,
             pv_to_pq_generators=None,
             power=np.array(results["p_mw"]),
             qower=np.array(results["q_mvar"]),
+            type="PP_NR"
       )
    #---------HOVEDFUNKSJON-----------------------------------
-   run_excel_with_pandapower(Excelark)
+   run_excel_with_pandapower(excel_file)
+#---------------validerer nettet med pandapower--------------

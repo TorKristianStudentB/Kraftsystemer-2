@@ -1,24 +1,61 @@
-from GridMaker.Imports import MakeGrid, Grid, np, validating,  lag_rapport, Path
-
-
-
-
-#-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
-ExcelSheet = Path.cwd() / "Grid" / "Enkel_nett_teste_qmaxmin.xlsx"
-#-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
-
+from GridMaker.Imports import excelfilepath, MakeGrid, Path, pd
 
 #----------Main Running---------------
 if __name__ == "__main__":
+
+
+   #-------Opretter en A matrise til sammenlignign av resultater-----
+   A_volt = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC"])
+   A_angle = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC"])
+   #-------Opretter en A matrise til sammenlignign av resultater-----
+
+
    #---------lager nettet til klassen grid fra excelarket-------
-   grid = MakeGrid(ExcelSheet)
+   grid = MakeGrid(excelfilepath)
    #---------lager nettet til klassen grid fra excelarket-------
    
+
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
    grid.loadflowsolutionNR()
+   A_volt["NR"] = grid.solution.volt
+   A_angle["NR"] = grid.solution.angle
+   print(grid.solution.pv_to_pq_generators)
+   print("NR til Tor: vellyket")
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
-   
-   #-----------------Lager rapport om løsningene----------------
-   lag_rapport(grid, grid.solution.volt, grid.solution.angle, grid.solution.power, grid.solution.qower)
-   #-----------------Lager rapport om løsningene----------------
+
+
+   #---------Kjører lastflytanalyse med DC metode- 
+   grid.DCPF()
+   A_volt["DC"] = grid.solution.volt
+   A_angle["DC"] = grid.solution.angle
+   print("DCLF til Sverre: vellyket")
+   #---------Kjører lastflytanalyse med DC metode-
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.FDLF()
+   A_volt["FD"] = grid.solution.volt
+   A_angle["FD"] = grid.solution.angle
+   print("FDLD til Theo: vellyket")
+   #---------Kjører lastflytanalyse med FDLF metode-
+
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_NR()
+   A_volt["PP_NR"] = grid.solution.volt
+   A_angle["PP_NR"] = grid.solution.angle
+   print("PP_NR til Håkon og Vegard: vellyket")
+   #---------Kjører lastflytanalyse med FDLF metode-
+
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_DC()
+   A_volt["PP_DC"] = grid.solution.volt
+   A_angle["PP_DC"] = grid.solution.angle
+   print("PP_DC til Andreas: vellyket")
+   #---------Kjører lastflytanalyse med FDLF metode-
+
+   #--------Printer resultatene i A--------------
+   print(A_volt)
+   print(A_angle)
+   #--------Printer resultatene i A--------------
 #----------Main Running---------------

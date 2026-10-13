@@ -1,5 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, pandapower_FDLF
-
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, excelfilepath, pandapower_FDLF
 
 
 #----------Making grid class---------------
@@ -25,6 +24,14 @@ class Grid:
 
    def pandapower_FDLF(self):
        return pandapower_FDLF(self)
+
+   def validating_PP_DC(self):
+       from Validating.validating_pandapower_DC import validating_PP_DC   # lat import: valideringsfilene importerer selv GridMaker
+       return validating_PP_DC(self)
+
+   def validating_PP_NR(self):
+       from Validating.validating_pandapower_NR import validating_PP_NR   # lat import (se over)
+       return validating_PP_NR(excelfilepath,self)
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
@@ -38,7 +45,7 @@ class Grid:
 
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
    class Solution:
-      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower):
+      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower,type):
          self.volt = volt
          self.angle = angle
          self.iterasjoner = iterasjoner
@@ -48,6 +55,7 @@ class Grid:
          self.pv_to_pq_generators = pv_to_pq_generators
          self.power = power
          self.qower = qower
+         self.type = type
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
 
 
