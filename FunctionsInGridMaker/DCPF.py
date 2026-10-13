@@ -1,10 +1,22 @@
-from GridMaker.Imports import np
+from GridMaker.Imports import np,time
 
 #-------------utfører DC power flow----------------
 def dc_power_flow(grid):
 
-   #-----------trafoens tapp i pu: ratio i excelarket er det FYSISKE spenningsforholdet (lav Vbase / høy Vbase), men bussene er
-   #           normalisert mot egen Vbase. En nominell trafo har derfor tapp 1.0 (samme normalisering som i admittansmatrise.py)-------
+   #----------starter en tidsklokke på kjøringen-----------
+   start_time = time.perf_counter()
+   #----------starter en tidsklokke på kjøringen-----------
+
+   #--------oppstart for effektivitet------------
+   def oppstart():
+       Y=grid.admittansmatrise()
+       N=len(grid.bus)
+       return Y,N
+   #--------oppstart for effektivitet------------
+   Y,N=oppstart()
+
+
+   #-----------trafoens tapp i pu-------
    def ratio_pu(trafo):
       vbase_fra = next(b.Vbase for b in grid.bus if b.busNumber == trafo.Frombus)
       vbase_til = next(b.Vbase for b in grid.bus if b.busNumber == trafo.Tobus)
@@ -13,10 +25,9 @@ def dc_power_flow(grid):
 
 
    #-----------lager Y DC matrisen-------------
-   def Y_convert():
-    Y=grid.admittansmatrise()
+   def Y_convert(Y,N):
     # Tapsfri DC-modell: samme grenvekter brukes i matrise og effektflyt.
-    Y_dc = np.zeros((len(grid.bus), len(grid.bus)))
+    Y_dc = np.zeros((N, N))
     indices = {bus.busNumber: i for i, bus in enumerate(grid.bus)}
     for branch in [*grid.line, *grid.trafo]:
         i, j = indices[branch.Frombus], indices[branch.Tobus]
@@ -31,11 +42,11 @@ def dc_power_flow(grid):
         Y_dc[j, i] -= weight
     return Y,Y_dc
    #-----------lager Y DC matrisen-------------
-   Y,Y_dc = Y_convert()
+   Y , Y_dc = Y_convert(Y,N)
    
 
    #---------oppretter klasser PV og PQ for bussene--------------------
-   def busclassifier():
+   def busclassifier(Y):
         bus=[]
         for i in range(len(grid.bus)):
             if i == 0:
@@ -55,7 +66,7 @@ def dc_power_flow(grid):
                 bus.append("PQ")
         return bus
    #---------oppretter klasser PV og PQ for bussene--------------------
-   busPVPQ=busclassifier()
+   busPVPQ=busclassifier(Y)
 
 
    #-----------------------regner ut netto aktiv effekt--------------
@@ -72,7 +83,8 @@ def dc_power_flow(grid):
 
    #------------finner busser som skal være med i beregningen, dvs ikke referansebussen----------- 
    def busses_in_beregninen():
-
+      flagg=False
+      solution=True
       active_buses = []
       for i in range(len(grid.bus)):
 
@@ -87,7 +99,17 @@ def dc_power_flow(grid):
       P_reduced_pu = P_reduced
 
       #-------------løser dc power flow og finner spenningsvinklen-------------------------------
-      delta_reduced = np.linalg.solve(Y_dc_reduced, P_reduced_pu)
+      #----------sjekker om den divigerer, og gir ikke konvererer----------
+      try:
+         delta_reduced = np.linalg.solve(Y_dc_reduced, P_reduced_pu)
+      except np.linalg.LinAlgError:
+         flagg = True
+         solution = False
+         delta = None
+         return delta
+      #----------sjekker om den divigerer, og gir ikke konvererer----------
+
+
       delta = np.full(len(grid.bus), float(grid.bus[0].Angle))
 
       for k in range(len(active_buses)):
@@ -96,10 +118,9 @@ def dc_power_flow(grid):
          delta[bus_index] += delta_reduced[k]
 
       return delta
-
    #------------finner busser som skal være med i beregningen, dvs ikke referansebussen-----------      
+   delta = busses_in_beregninen()
 
-   delta =busses_in_beregninen()
 
    #------------beregne aktiv effektflyt på linjene--------------- 
    def flow_in_line():
@@ -124,7 +145,8 @@ def dc_power_flow(grid):
    #------------beregne aktiv effektflyt på linjene--------------- 
    line_flow = flow_in_line()
 
-   # Beregner transformatorflyt i MW med samme modell som DC-matrisen.
+
+   #-------Beregner transformatorflyt i MW med samme modell som DC-matrisen----------
    def flow_in_trafo():
       flow = []
       for trafo in grid.trafo:
@@ -136,80 +158,60 @@ def dc_power_flow(grid):
          P_ij = (delta[from_bus] - delta[to_bus]) * ratio_pu(trafo) / trafo.X
          flow.append(P_ij * grid.Base.Sbase)
       return flow
-
+   #-------Beregner transformatorflyt i MW med samme modell som DC-matrisen----------
    trafo_flow = flow_in_trafo()
 
-   
 
-   # Lagrer de beregnede vinklene på bussene.
-   for i in range(len(grid.bus)):
-      grid.bus[i].Angle = delta[i]
-
-   #-------------Bygger formatering --------------------------------------------
-
-   power = Y_dc @ delta               # netto busseffekt i pu, inkludert slack
-   active_buses = [i for i, kind in enumerate(busPVPQ) if kind not in ("ref", "alene")]
-   mismatch = P_scheduled[active_buses] - power[active_buses]
-   konvergerte = bool(np.all(np.isfinite(delta)) and np.max(np.abs(mismatch), initial=0) <= 1e-6)
-   qower = np.zeros(len(grid.bus))     # Q beregnes ikke av DC-modellen
+   #---------Lagrer vinkler-------------------
+   def lagrer_beregneden_vinklene_paa_bussen():
+      for i in range(len(grid.bus)):
+         grid.bus[i].Angle = delta[i]
+   #---------Lagrer vinkler-------------------
 
 
    #-------------Bygger formatering --------------------------------------------
+   def bygg_formateringen():
+      power = Y_dc @ delta               # netto busseffekt i pu, inkludert slack
+      active_buses = [i for i, kind in enumerate(busPVPQ) if kind not in ("ref", "alene")]
+      mismatch = P_scheduled[active_buses] - power[active_buses]
+      konvergerte = bool(np.all(np.isfinite(delta)) and np.max(np.abs(mismatch), initial=0) <= 1e-6)
+      qower = np.zeros(len(grid.bus))     # Q beregnes ikke av DC-modellen
+      return power,mismatch,konvergerte,qower
+   power,mismatch,konvergerte,qower = bygg_formateringen()
+   #-------------Bygger formatering --------------------------------------------
 
-   #---------------Loader løsningen som et eget object under hovednettet-----------
-   grid.solution = grid.__class__.Solution(
-         volt        = np.array([b.Volt for b in grid.bus]),
-         angle       = np.array([b.Angle for b in grid.bus]),
-         iterasjoner = 1,
-         mismatch    = mismatch,
-         konvergerte = konvergerte,
-         flow_in_line = np.array(line_flow),
-         pv_to_pq_generators = None,
-         power=power,
-         qower=qower,
-         type = "DC"
-   )
-   #---------------Loader løsningen som et eget object under hovednettet-----------
-   
 
-   # Skriver ut vinkler, effektflyt og kontroll av løsningen.
-   def skriv_resultater():
-      print("\nDC-lastflyt:")
-      print("Løsning godkjent:", grid.solution.konvergerte)
 
-      # Vinklene lagres i radianer og vises i grader.
-      print("\nSpenningsvinkler:")
-      for i in range(len(grid.bus)):
-         vinkel = np.degrees(grid.solution.angle[i])
-         print(f"Buss {grid.bus[i].busNumber}: {vinkel:.4f} grader")
-
-      # Busseffekten lagres i pu og vises i MW.
-      print("\nNetto aktiv effekt per buss:")
-      for i in range(len(grid.bus)):
-         effekt = grid.solution.power[i] * grid.Base.Sbase
-         print(f"Buss {grid.bus[i].busNumber}: {effekt:.4f} MW")
-
-      # Første buss er referansebussen som balanserer nettet.
-      slack_effekt = grid.solution.power[0] * grid.Base.Sbase
-      print(f"\nSlackbuss {grid.bus[0].busNumber}: {slack_effekt:.4f} MW")
-
-      # Linje- og transformatorflyt er allerede beregnet i MW.
-      print("\nAktiv effektflyt på linjene:")
-      for i in range(len(grid.line)):
-         line = grid.line[i]
-         print(f"Linje {line.Frombus} -> {line.Tobus}: {line_flow[i]:.4f} MW")
-
-      print("\nAktiv effektflyt gjennom transformatorene:")
-      for i in range(len(grid.trafo)):
-         trafo = grid.trafo[i]
-         print(f"Trafo {trafo.Frombus} -> {trafo.Tobus}: {trafo_flow[i]:.4f} MW")
-
-      # Viser største restfeil i effektligningene uten slackbussen.
-      maks_avvik = 0.0
-      for avvik in grid.solution.mismatch:
-         if abs(avvik) > maks_avvik:
-            maks_avvik = abs(avvik)
-      print(f"\nStørste effektavvik: {maks_avvik:.3e} pu")
-   #skriv_resultater()
-   return grid
+   if delta is False:
+      #---------------Loader løsningen som et eget object under hovednettet-----------
+         grid.solution = grid.__class__.Solution(
+               volt        = None,
+               angle       = None,
+               iterasjoner = None,
+               mismatch    = None,
+               konvergerte = False,
+               flow_in_line = None,
+               pv_to_pq_generators = None,
+               power=None,
+               qower=None,
+               type = "DC",
+               kjoretid = time.perf_counter() - start_time
+         )
+      #---------------Loader løsningen som et eget object under hovednettet-----------
+   else:
+      #---------------Loader løsningen som et eget object under hovednettet-----------
+      grid.solution = grid.__class__.Solution(
+            volt        = np.array([b.Volt for b in grid.bus]),
+            angle       = np.array([b.Angle for b in grid.bus]),
+            iterasjoner = 1,
+            mismatch    = mismatch,
+            konvergerte = konvergerte,
+            flow_in_line = np.array(line_flow),
+            pv_to_pq_generators = None,
+            power=power,
+            qower=qower,
+            type = "DC",
+            kjoretid = time.perf_counter() - start_time
+      )
+      #---------------Loader løsningen som et eget object under hovednettet-----------
 #-------------utfører DC power flow----------------

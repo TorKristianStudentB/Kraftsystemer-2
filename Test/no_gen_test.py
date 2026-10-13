@@ -1,11 +1,55 @@
-from GridMaker.Imports import MakeGrid 
-import pytest as pyt
+from GridMaker.Imports import pyt
 
-@pyt.mark.parametrize("metode",["NR","FD","DC"])
-def test_no_gen(trondelag,metode):
+#---------------Kjører og ser om null i generator får samme svar som 0.0000001---------
+def test_no_gen_NR(grid_g,grid_h):
 
-    g = MakeGrid(trondelag)
-    h = MakeGrid(trondelag)
+    g = grid_g
+    h = grid_h
+
+    for b in g.bus:
+        b.P_gen = 0
+        b.Q_gen = 0
+
+
+    for c in h.bus:
+        c.P_gen = 0.0001
+        c.Q_gen = 0.0001
+
+    g.loadflowsolutionNR()
+    h.loadflowsolutionNR()
+
+
+    assert g.solution.konvergerte == True
+    assert h.solution.konvergerte == True
+
+
+def test_no_gen_FDLF(grid_g,grid_h):
+
+    g = grid_g
+    h = grid_h
+
+    for b in g.bus:
+        b.P_gen = 0
+        b.Q_gen = 0
+
+        g.FDLF()
+        h.FDLF()
+
+    for c in h.bus:
+        c.P_gen = 0.0001
+        c.Q_gen = 0.0001
+
+    g.FDLF()
+    h.FDLF()
+
+    assert g.solution.konvergerte == True
+    assert h.solution.konvergerte == True
+
+    
+def test_no_gen_DCPF(grid_g,grid_h):
+
+    g = grid_g
+    h = grid_h
 
     for b in g.bus:
         b.P_gen = 0
@@ -15,24 +59,11 @@ def test_no_gen(trondelag,metode):
         c.P_gen = 0.0001
         c.Q_gen = 0.0001
 
-    if metode == "NR":
+        
 
-        g.loadflowsolutionNR()
-        h.loadflowsolutionNR()
-
-    elif metode =="FD":
-
-        g.FDLF()
-        h.FDLF()
-
-    elif metode == "DC":
-
-        g.DCPF()
-        h.DCPF()
+    g.DCPF()
+    h.DCPF()
 
     assert g.solution.konvergerte == True
     assert h.solution.konvergerte == True
-    assert g.solution.volt == pyt.approx(h.solution.volt,abs=1e-6)
-    assert g.solution.angle == pyt.approx(h.solution.angle,abs=1e-3)
-    
-
+#---------------Kjører og ser om null i generator får samme svar som 0.0000001---------

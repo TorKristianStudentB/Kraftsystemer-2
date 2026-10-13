@@ -1,9 +1,13 @@
-from GridMaker.Imports import np
+from GridMaker.Imports import np,time
 
 #----------------------------Her er Newtons Raphson metoden--------------------------------------------------
 def NewtonRaphson(grid): 
-
+   
    #busindeks=0 er ref
+
+   #----------starter en tidsklokke på kjøringen-----------
+   start_time = time.perf_counter()
+   #----------starter en tidsklokke på kjøringen-----------
 
    #-------oppstart, lage Y matrisen-----------
    def oppstart():
@@ -160,7 +164,6 @@ def NewtonRaphson(grid):
    def jacobian(busPVPQ):
     Y = grid.admittansmatrise()
     n = len(grid.bus)
-
     #----------pi derivert mhp. angle i-------------------
     def dpi_ddeltai(i):
         a = 0
@@ -360,7 +363,7 @@ def NewtonRaphson(grid):
    def finalsolver(P_scheduled, Q_scheduled):
         i=0
         ferdig=False
-        solution=False
+        solution=True
         pv_to_pq_generators=[]
         antall_tilbake_til_pv=0     # hindrer evig veksling mellom PV og PQQ
         flagg = False
@@ -380,7 +383,7 @@ def NewtonRaphson(grid):
 
             #-------sjekker om vi har konvergert-------
             error = np.max(np.abs(deltaPQ))
-            if error <= 1e-6:
+            if error <=1e-6:
                 #-------slipper busser som ble klemt for tidlig tilbake til PV, og fortsetter-------
                 k_tilbake=Q_klemt_buss_skal_tilbake_til_PV() if antall_tilbake_til_pv<4*max(len(grid.gen),1) else None
                 if k_tilbake is not None:
@@ -398,6 +401,8 @@ def NewtonRaphson(grid):
 
             #-------ny jacobian hver iterasjon-------
             J=jacobian(busPVPQ)
+
+            #----------sjekker om den divigerer, og gir ikke konvererer----------
             try:
                 deltax=np.linalg.solve(J,deltaPQ)
             except np.linalg.LinAlgError:
@@ -412,6 +417,14 @@ def NewtonRaphson(grid):
                 ferdig = True
                 break
 
+            elif np.max(deltaPQ)>=1e200 or np.max(deltaPQ)<=-1e200:
+                flagg = True
+                solution = False
+                ferdig = True
+                break
+            #----------sjekker om den divigerer, og gir ikke konvererer----------
+
+
             k=0
             for j in range(len(grid.bus)):
                 if busPVPQ[j]=="PV":
@@ -425,6 +438,7 @@ def NewtonRaphson(grid):
             if i >= 50000:
                 ferdig=True
                 solution=False
+
             i=i+1
 
         #----------------Regner ut flyten per linje: kompleks effekt S = V*konj(I)---------------
@@ -451,23 +465,24 @@ def NewtonRaphson(grid):
 
         return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower, flagg
    #------------Løser systemet med NR----------------------------------------------
-   Konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower, flagg = finalsolver(P_scheduled, Q_scheduled)
+   konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower, flagg = finalsolver(P_scheduled, Q_scheduled)
     #---------------Loader løsningen som et eget object under hovednettet-----------
 
 
    if flagg:
            #---------------Loader løsningen som et eget object under hovednettet (Hvis error verider)-----------
           grid.solution = grid.__class__.Solution(
-               volt        = np.full(len(np.array([b.Volt for b in grid.bus])),np.nan),
-               angle       = np.full(len(np.array([b.Angle for b in grid.bus])),np.nan),
+               volt        = None,
+               angle       = None,
                iterasjoner = int(iterasjon),
                mismatch    = deltaPQ,
-               konvergerte = Konvergerte,
-               flow_in_line = np.full(len(flow_in_line),np.nan),
-               pv_to_pq_generators = pv_to_pq_generators,
-               power= np.full(len(power),np.nan),
-               qower= np.full(len(qower),np.nan),
-               type="NR"
+               konvergerte = konvergerte,
+               flow_in_line = None,
+               pv_to_pq_generators = None,
+               power= None,
+               qower= None,
+               type="NR",
+               kjoretid = time.perf_counter() - start_time,
            )
 
    else:
@@ -477,12 +492,13 @@ def NewtonRaphson(grid):
                 angle       = np.array([b.Angle for b in grid.bus]),
                 iterasjoner = int(iterasjon),
                 mismatch    = deltaPQ,
-                konvergerte = Konvergerte,
+                konvergerte = konvergerte,
                 flow_in_line = np.array(flow_in_line),
                 pv_to_pq_generators = pv_to_pq_generators,
                 power=np.array(power),
                 qower=np.array(qower),
-                type="NR"
+                type="NR",
+                kjoretid = time.perf_counter() - start_time
             )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 

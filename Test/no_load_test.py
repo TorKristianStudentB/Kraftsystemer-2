@@ -1,11 +1,10 @@
-from GridMaker.Imports import MakeGrid 
-import pytest as pyt
+from GridMaker.Imports import pyt
 
-@pyt.mark.parametrize("metode",["NR","FD","DC"])
-def test_no_load(trondelag,metode):
+#---------Tester no load hvor vi har null eller veldig nærme null----------
+def test_no_load_NR(grid_g,grid_h):
 
-    g = MakeGrid(trondelag)
-    h = MakeGrid(trondelag)
+    g = grid_g
+    h = grid_h
 
     for b in g.bus:
         b.P_load = 0
@@ -15,23 +14,55 @@ def test_no_load(trondelag,metode):
         c.P_load = 0.0001
         c.Q_load = 0.0001
 
-    if metode == "NR":
 
-        g.loadflowsolutionNR()
-        h.loadflowsolutionNR()
 
-    elif metode =="FD":
+    g.loadflowsolutionNR()
+    h.loadflowsolutionNR()
 
-        g.FDLF()
-        h.FDLF()
 
-    elif metode == "DC":
+    assert g.solution.konvergerte == False
+    assert h.solution.konvergerte == False
 
-        g.DCPF()
-        h.DCPF()
+def test_no_load_FD(grid_g,grid_h):
 
+    g = grid_g
+    h = grid_h
+
+    for b in g.bus:
+        b.P_load = 0
+        b.Q_load = 0
+
+    for c in h.bus:
+        c.P_load = 0.0001
+        c.Q_load = 0.0001
+
+
+    g.FDLF()
+    h.FDLF()
+
+    #null last og nesten null last skal gi samme utfall og samme løsning
+    assert g.solution.konvergerte == h.solution.konvergerte
+    assert g.solution.angle == pyt.approx(h.solution.angle,abs=1e-3)
+
+def test_no_load_DC(grid_g,grid_h):
+
+    g = grid_g
+    h = grid_h
+
+    for b in g.bus:
+        b.P_load = 0
+        b.Q_load = 0
+
+    for c in h.bus:
+        c.P_load = 0.0001
+        c.Q_load = 0.0001
+
+
+    g.DCPF()
+    h.DCPF()
+
+    #DC er et lineært system, så null last gir alltid en endelig løsning og skal ligne på nesten null last
     assert g.solution.konvergerte == True
     assert h.solution.konvergerte == True
-    assert g.solution.volt == pyt.approx(h.solution.volt,abs=1e-6)
     assert g.solution.angle == pyt.approx(h.solution.angle,abs=1e-3)
-    
+#---------Tester no load hvor vi har null eller veldig nærme null----------

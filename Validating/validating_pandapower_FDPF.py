@@ -3,7 +3,7 @@ from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unng
 import pandapower.topology as top
 
 #-----------validating pandapower fast decoupled load flow-----------------
-def validating_PP_FDPF(self):
+def validating_PP_FDPF(grid):
 
    def hent_bustyper(grid):
       """

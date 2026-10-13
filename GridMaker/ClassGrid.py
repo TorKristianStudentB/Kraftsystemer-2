@@ -51,7 +51,7 @@ class Grid:
 
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
    class Solution:
-      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower,type):
+      def __init__(self, volt, angle, flow_in_line, iterasjoner, mismatch, konvergerte, pv_to_pq_generators,power,qower,type,kjoretid):
          self.volt = volt
          self.angle = angle
          self.iterasjoner = iterasjoner
@@ -62,6 +62,7 @@ class Grid:
          self.power = power
          self.qower = qower
          self.type = type
+         self.kjoretid = kjoretid
 #-----------De løste verdiene i nettet etter en lastflytanalyse-----------
 
 
