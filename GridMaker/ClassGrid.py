@@ -35,8 +35,8 @@ class Grid:
        return validating_PP_FDPF(self)
 
    def validating_PP_NR2(self):
-          from Validating.validating_pandapower_NR_bussklassifisering2 import validating_PP_NR   # lat import (se over)
-          return validating_PP_NR(self)
+          from Validating.validating_pandapower_NR_bussklassifisering2 import validating_PP_NR2   # lat import (se over)
+          return validating_PP_NR2(self)
 
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
