@@ -363,6 +363,7 @@ def NewtonRaphson(grid):
         solution=False
         pv_to_pq_generators=[]
         antall_tilbake_til_pv=0     # hindrer evig veksling mellom PV og PQQ
+        flagg = False
 
         while ferdig!=True:
 
@@ -397,7 +398,20 @@ def NewtonRaphson(grid):
 
             #-------ny jacobian hver iterasjon-------
             J=jacobian(busPVPQ)
-            deltax=np.linalg.solve(J,deltaPQ)
+            try:
+                deltax=np.linalg.solve(J,deltaPQ)
+            except np.linalg.LinAlgError:
+                flagg = True
+                solution = False
+                ferdig = True
+                break
+
+            if not np.all(np.isfinite(deltax)):
+                flagg = True
+                solution = False
+                ferdig = True
+                break
+
             k=0
             for j in range(len(grid.bus)):
                 if busPVPQ[j]=="PV":
@@ -435,25 +449,41 @@ def NewtonRaphson(grid):
         qower.insert(0, -1*sum(np.array(qower)))
         #------------------Må legge til første element, anvender at summen av effekt er null--------                 
 
-        return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower
+        return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower, flagg
    #------------Løser systemet med NR----------------------------------------------
-   Konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower = finalsolver(P_scheduled, Q_scheduled)
+   Konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower, flagg = finalsolver(P_scheduled, Q_scheduled)
+    #---------------Loader løsningen som et eget object under hovednettet-----------
 
 
+   if flagg:
+           #---------------Loader løsningen som et eget object under hovednettet (Hvis error verider)-----------
+          grid.solution = grid.__class__.Solution(
+               volt        = np.full(len(np.array([b.Volt for b in grid.bus])),np.nan),
+               angle       = np.full(len(np.array([b.Angle for b in grid.bus])),np.nan),
+               iterasjoner = int(iterasjon),
+               mismatch    = deltaPQ,
+               konvergerte = Konvergerte,
+               flow_in_line = np.full(len(flow_in_line),np.nan),
+               pv_to_pq_generators = pv_to_pq_generators,
+               power= np.full(len(power),np.nan),
+               qower= np.full(len(qower),np.nan),
+               type="NR"
+           )
 
-   #---------------Loader løsningen som et eget object under hovednettet-----------
-   grid.solution = grid.__class__.Solution(
-        volt        = np.array([b.Volt for b in grid.bus]),
-        angle       = np.array([b.Angle for b in grid.bus]),
-        iterasjoner = int(iterasjon),
-        mismatch    = deltaPQ,
-        konvergerte = Konvergerte,
-        flow_in_line = np.array(flow_in_line),
-        pv_to_pq_generators = pv_to_pq_generators,
-        power=np.array(power),
-        qower=np.array(qower),
-        type="NR"
-    )
+   else:
+        #---------------Loader løsningen som et eget object under hovednettet-----------
+        grid.solution = grid.__class__.Solution(
+                volt        = np.array([b.Volt for b in grid.bus]),
+                angle       = np.array([b.Angle for b in grid.bus]),
+                iterasjoner = int(iterasjon),
+                mismatch    = deltaPQ,
+                konvergerte = Konvergerte,
+                flow_in_line = np.array(flow_in_line),
+                pv_to_pq_generators = pv_to_pq_generators,
+                power=np.array(power),
+                qower=np.array(qower),
+                type="NR"
+            )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 
    return grid  
