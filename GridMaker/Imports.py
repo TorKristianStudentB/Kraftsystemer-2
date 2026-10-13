@@ -19,7 +19,9 @@ from FunctionsInGridMaker.DCPF import dc_power_flow
 from GridMaker.ClassGrid import Grid
 from GridMaker.ReadExcelGrid import MakeGrid
 from Validating.validating_pandapower_DC import validating_PP_DC
-from Validating.validating_pandapower_NR import validating_PP_NR
+from Validating.validating_pandapower_NR_bussklassifisering import validating_PP_NR
+from Validating.validating_pandapower_NR_bussklassifisering2 import validating_PP_NR2
+from Validating.validating_pandapower_FDPF import validating_PP_FDPF
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from datetime import datetime

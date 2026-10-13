@@ -5,8 +5,8 @@ if __name__ == "__main__":
 
 
    #-------Opretter en A matrise til sammenlignign av resultater-----
-   A_volt = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC"])
-   A_angle = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC"])
+   A_volt = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC", "PP_FD"])
+   A_angle = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR", "PP_DC", "PP_FD"])
    #-------Opretter en A matrise til sammenlignign av resultater-----
 
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
    grid.validating_PP_NR()
    A_volt["PP_NR"] = grid.solution.volt
    A_angle["PP_NR"] = grid.solution.angle
-   print("PP_NR til Håkon og Vegard: vellyket")
+   print("PP_NR til Vegard: vellyket")
    #---------Kjører lastflytanalyse med FDLF metode-
 
 
@@ -53,6 +53,15 @@ if __name__ == "__main__":
    A_angle["PP_DC"] = grid.solution.angle
    print("PP_DC til Andreas: vellyket")
    #---------Kjører lastflytanalyse med FDLF metode-
+
+   
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_FDPF()
+   A_volt["PP_FD"] = grid.solution.volt
+   A_angle["PP_FD"] = grid.solution.angle
+   print("PP_DC til Håkon: vellyket")
+   #---------Kjører lastflytanalyse med FDLF metode-
+      
 
    #--------Printer resultatene i A--------------
    print(A_volt)

@@ -1,3 +1,9 @@
+
+
+
+#Denne koden klassifiserer en buss på PV om det ikke er noe verdier på generatoren, ikke om den er tilkoblet
+
+
 from GridMaker.Imports import pd,np,pp,excelfilepath
 from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
 

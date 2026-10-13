@@ -27,8 +27,17 @@ class Grid:
        return validating_PP_DC(self)
 
    def validating_PP_NR(self):
-       from Validating.validating_pandapower_NR import validating_PP_NR   # lat import (se over)
+       from Validating.validating_pandapower_NR_bussklassifisering import validating_PP_NR   # lat import (se over)
        return validating_PP_NR(excelfilepath,self)
+
+   def validating_PP_FDPF(self):
+       from Validating.validating_pandapower_FDPF import validating_PP_FDPF   # lat import (se over)
+       return validating_PP_FDPF(self)
+
+   def validating_PP_NR2(self):
+          from Validating.validating_pandapower_NR_bussklassifisering2 import validating_PP_NR   # lat import (se over)
+          return validating_PP_NR(self)
+
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
