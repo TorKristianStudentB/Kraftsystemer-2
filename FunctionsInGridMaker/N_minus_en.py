@@ -9,13 +9,95 @@ def N_minus_en_kriteriet(excelfilepath):
       grid_main = MakeGrid(excelfilepath)
       try:
          grid_main.loadflowsolutionNR() 
-         print(f"Lastlytanalysen kjørte, gav svaret: {grid_main.solution.konvergerte}")
       except Exception as e:
-         print(f"Det oppstod en feil på hovednettet uten N-1 igangsatt: {e}")
-      
-      return grid_main
-   grid_main = oppstart_paa_hovednettet()
+         return False
+      noder=[b.busNumber for b in grid_main.bus]
+      return grid_main,noder
+   grid_main,noder = oppstart_paa_hovednettet()
    #------------tester først på hovednettet--------------
+
+
+   #------------Finner overtredelser i et løst nett, returnerer en liste med tekster------------
+   def overtredelse(grid):
+      liste = []
+      Sbase = grid.Base.Sbase
+      toleranse = 1e-3   #MW/MVAr, ellers gir flyttallsfeil falske overtredelser når NR legger Q akkurat på grensen
+      volt = grid.solution.volt
+      power = grid.solution.power
+      qower = grid.solution.qower
+      flyt = grid.solution.flow_in_line
+
+      #-----------spenning under V_min eller over V_max på hver buss----------
+      if volt is not None:
+         for i in range(len(grid.bus)):
+            navn = f"Bus {grid.bus[i].busNumber} ({grid.bus[i].Name})"
+            if grid.bus[i].V_min is not None:
+               if volt[i] < grid.bus[i].V_min:
+                  liste.append(f"{navn}: V = {volt[i]:.4f} pu utenfor [{grid.bus[i].V_min}, {grid.bus[i].V_max}]")
+            if grid.bus[i].V_max is not None:
+               if volt[i] > grid.bus[i].V_max:
+                  liste.append(f"{navn}: V = {volt[i]:.4f} pu utenfor [{grid.bus[i].V_min}, {grid.bus[i].V_max}]")
+      #-----------spenning under V_min eller over V_max på hver buss----------
+
+
+      #-----------tilsynelatende effekt over S_max på hver buss----------
+      if power is not None and qower is not None:
+         for i in range(len(grid.bus)):
+            navn = f"Bus {grid.bus[i].busNumber} ({grid.bus[i].Name})"
+            S = (power[i]**2 + qower[i]**2)**0.5 * Sbase
+            if S > grid.bus[i].S_max + toleranse:
+               liste.append(f"{navn}: S = {S:.1f} MVA over S_max = {grid.bus[i].S_max:.1f}")
+      #-----------tilsynelatende effekt over S_max på hver buss----------
+
+
+      #-----------generatorene på bussen: P_gen over P_max, Q_gen over Q_max eller under Q_min----------
+      if power is not None and qower is not None:
+         for i in range(len(grid.bus)):
+            navn = f"Bus {grid.bus[i].busNumber} ({grid.bus[i].Name})"
+            P_max_sum = 0
+            Q_max_sum = 0
+            Q_min_sum = 0
+            antall_generatorer = 0
+
+            #---summerer grensene til alle generatorene som står på bussen----
+            for j in range(len(grid.gen)):
+               if grid.gen[j].bus == grid.bus[i].busNumber:
+                  P_max_sum = P_max_sum + grid.gen[j].P_max
+                  if grid.gen[j].Q_max is not None:
+                     Q_max_sum = Q_max_sum + grid.gen[j].Q_max
+                  if grid.gen[j].Q_min is not None:
+                     Q_min_sum = Q_min_sum + grid.gen[j].Q_min
+                  antall_generatorer = antall_generatorer + 1
+            #---summerer grensene til alle generatorene som står på bussen----
+
+            if antall_generatorer > 0:
+               P_gen = (power[i] + grid.bus[i].P_load) * Sbase
+               Q_gen = (qower[i] + grid.bus[i].Q_load) * Sbase
+               if P_max_sum > 0:
+                  if P_gen > P_max_sum * Sbase + toleranse:
+                     liste.append(f"{navn}: P_gen = {P_gen:.1f} MW over P_max = {P_max_sum * Sbase:.1f}")
+               if Q_max_sum > 0:
+                  if Q_gen > Q_max_sum * Sbase + toleranse:
+                     liste.append(f"{navn}: Q_gen = {Q_gen:.1f} MVAr over Q_max = {Q_max_sum * Sbase:.1f}")
+               if Q_min_sum < 0:   #Q_min = 0 i excelarket betyr ingen grense
+                  if Q_gen < Q_min_sum * Sbase - toleranse:
+                     liste.append(f"{navn}: Q_gen = {Q_gen:.1f} MVAr under Q_min = {Q_min_sum * Sbase:.1f}")
+      #-----------generatorene på bussen: P_gen over P_max, Q_gen over Q_max eller under Q_min----------
+
+
+      #-----------flyt i linjene over S_max, kompleks flyt er i pu og reell flyt (DC) er allerede i MW----------
+      if flyt is not None:
+         if len(flyt) == len(grid.line):
+            for i in range(len(grid.line)):
+               S_linje = abs(flyt[i])
+               if isinstance(flyt[i], complex):
+                  S_linje = S_linje * Sbase
+               if S_linje > grid.line[i].S_max + toleranse:
+                  liste.append(f"Linje {grid.line[i].lineNumber} ({grid.line[i].Name}): S = {S_linje:.1f} MVA over S_max = {grid.line[i].S_max:.1f}")
+      #-----------flyt i linjene over S_max, kompleks flyt er i pu og reell flyt (DC) er allerede i MW----------
+
+      return liste
+   #------------Finner overtredelser i et løst nett, returnerer en liste med tekster------------
    
 
    #-----------lage en par liste-----------
@@ -23,15 +105,32 @@ def N_minus_en_kriteriet(excelfilepath):
       Par=[]
       index_paa_par=[]
       grid = grid_main
+
       for i in range(len(grid.line)):
          a=grid.line[i].Frombus
          b=grid.line[i].Tobus
          Par.append([a,b])
          index_paa_par.append(grid.line[i].lineNumber)
+
       return Par,index_paa_par
    #-----------lage en par liste-----------
    Par, index_paa_par= bygge_linje_par_listen(grid_main)
-   noder=[b.busNumber for b in grid_main.bus]
+   
+
+
+   #-----------lage en par liste for trafoene, de blir ikke tatt ut, men de holder nettet sammenhengende-----------
+   def bygge_trafo_par_listen(grid):
+      Par_trafo=[]
+      grid = grid_main
+
+      for i in range(len(grid.trafo)):
+         a=grid.trafo[i].Frombus
+         b=grid.trafo[i].Tobus
+         Par_trafo.append([a,b])
+
+      return Par_trafo
+   #-----------lage en par liste for trafoene, de blir ikke tatt ut, men de holder nettet sammenhengende-----------
+   Par_trafo = bygge_trafo_par_listen(grid_main)
 
 
    # ------------ Sjekker om nettet blir splittet ------------
@@ -47,7 +146,7 @@ def N_minus_en_kriteriet(excelfilepath):
 
          return x
 
-      for a, b in par:
+      for a, b in par + Par_trafo:   #trafoene er alltid med, siden de ikke tas ut
          rot_a = finn(a)
          rot_b = finn(b)
 
@@ -92,7 +191,6 @@ def N_minus_en_kriteriet(excelfilepath):
       return serier 
    #---------------Finner serier med linjer man kan fjerne før det blir øy----------
    Serier_av_linjer_som_kan_fjernes_før_det_blir_øy = Hvilke_serier_av_linje_uten_at_det_blir_oy(Par)
-
 
 
    #---------Leser excel arket og bruker pandas DF-------
@@ -251,6 +349,7 @@ def N_minus_en_kriteriet(excelfilepath):
                   kodens_identifikasjonssystem = i,
                   cords = [float(busDF["lat"].iloc[i]),float(busDF["lon"].iloc[i])] if cordinater else None,
                   place = [float(busDF["x"].iloc[i]),float(busDF["y"].iloc[i])] if plassering else None,
+                  S_max = float(busDF["S_max"].iloc[i]),
                )
                grid.bus.append(b)
 
@@ -271,6 +370,7 @@ def N_minus_en_kriteriet(excelfilepath):
                   Tobus      = int(lineDF["bus1"].iloc[i]),
                   lenght     = float(lineDF["length"].iloc[i]),
                   eic_code = str(lineDF["eic code"].iloc[i]) if eic_code_line else None,
+                  S_max = float(lineDF["S_max"].iloc[i]),
                )
                grid.line.append(b)
             #--------------oppretter linjer fra excel arket----------
@@ -286,6 +386,7 @@ def N_minus_en_kriteriet(excelfilepath):
                   R       = float(trafoDF["R"].iloc[i]),
                   X       = float(trafoDF["X"].iloc[i]),
                   eic_code = str(trafoDF["eic code"].iloc[i]) if eic_code_trafo else None,
+                  S_max = float(trafoDF["S_max"].iloc[i]),
                )
                grid.trafo.append(tr)
             #--------------oppretter Trafoer fra excel arket----------
@@ -294,7 +395,7 @@ def N_minus_en_kriteriet(excelfilepath):
             #--------------oppretter generator data fra excel arket---
             for i in range(len(genDF)):
                   b = Grid.gen(
-                     P_max     = int(genDF["Pmax"].iloc[i]),
+                     P_max     = float(genDF["Pmax"].iloc[i]),   #float, ellers kuttes desimalene i pu-verdien
                      name      = str(genDF["name"].iloc[i]),
                      bus       = float(genDF["bus"].iloc[i]),
                      Q_max = float(genDF["Qmax"].iloc[i]) if Q_max else None,
@@ -308,8 +409,14 @@ def N_minus_en_kriteriet(excelfilepath):
       return grid
    #-----------Hentet fra ReadExcelGrid------------
 
+   #------------Samler overtredelsene for hvert uttak, nøkkelen er (linjene som er tatt ut, solver)------------
+   overtredelser_N_minus_en = {}
+   #------------Samler overtredelsene for hvert uttak, nøkkelen er (linjene som er tatt ut, solver)------------
+
+
    #------------Hoved løseren, den bruker en solverene for å sjekke N-1 kriteriet------------
    def finalsolver(excelfile, linjer_som_kan_fjernes_før_det_blir_øy, Serier_av_linjer_som_kan_fjernes_før_det_blir_øy):
+
 
       #--------------------Leser excelarket på nytt, fjerner linjene og tester at lastflyten konvergerer----------
       def test_nett_uten_linjer(fjernes_id):
@@ -319,13 +426,16 @@ def N_minus_en_kriteriet(excelfilepath):
          try:
             a=True
             grid.loadflowsolutionNR()
-            if grid.solution.konvergert==False:
+            overtredelser_N_minus_en[(tuple(fjernes_id), "NR")] = overtredelse(grid)
+            if grid.solution.konvergerte==False:
                a=False
             grid.FDLF()
-            if grid.solution.konvergert==False:
+            overtredelser_N_minus_en[(tuple(fjernes_id), "FD")] = overtredelse(grid)
+            if grid.solution.konvergerte==False:
                a=False
             grid.DCPF()
-            if grid.solution.konvergert==False:
+            overtredelser_N_minus_en[(tuple(fjernes_id), "DC")] = overtredelse(grid)
+            if grid.solution.konvergerte==False:
                a=False
 
          except Exception as e:
@@ -385,7 +495,7 @@ def N_minus_en_kriteriet(excelfilepath):
    feilet_kun_en, feilet_trappevis, feilet_serier =  finalsolver(excelfilepath, linjer_som_kan_fjernes_før_det_blir_øy, Serier_av_linjer_som_kan_fjernes_før_det_blir_øy)
 
    if feilet_kun_en == [] and feilet_trappevis ==[] and feilet_serier==[]:   #tomme lister = ingenting feilet
-      return True
+      return True, feilet_kun_en, feilet_trappevis, feilet_serier, overtredelser_N_minus_en
    else:
-      return False
+      return False, feilet_kun_en, feilet_trappevis, feilet_serier, overtredelser_N_minus_en
 #-------------Endrer excelarket midlertidig for å sjekke at det konvergerer-------------

@@ -4,10 +4,10 @@ from GridMaker.Imports import np,time
 def NewtonRaphson(grid): 
    
    #busindeks=0 er ref
-
    #----------starter en tidsklokke på kjøringen-----------
    start_time = time.perf_counter()
    #----------starter en tidsklokke på kjøringen-----------
+
 
    #-------oppstart, lage Y matrisen-----------
    def oppstart():
@@ -382,7 +382,6 @@ def NewtonRaphson(grid):
 
             #-------sjekker om vi har konvergert-------
             error = np.max(np.abs(deltaPQ))
-            print(error)
             if error <=1e-6:
                 #-------slipper busser som ble klemt for tidlig tilbake til PV, og fortsetter-------
                 k_tilbake=Q_klemt_buss_skal_tilbake_til_PV() if antall_tilbake_til_pv<4*max(len(grid.gen),1) else None

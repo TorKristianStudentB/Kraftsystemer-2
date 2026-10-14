@@ -20,6 +20,7 @@ from FunctionsInGridMaker.theveninZth import theveninZth
 from FunctionsInGridMaker.admittansmatrise import cutsem
 from FunctionsInGridMaker.NewtonsRaphson import NewtonRaphson
 from FunctionsInGridMaker.DCPF import dc_power_flow
+from FunctionsInGridMaker.Resultater_fremvisning import resultater_fremvisning
 from GridMaker.ClassGrid import Grid
 from GridMaker.ReadExcelGrid import MakeGrid
 from FunctionsInGridMaker.N_minus_en import  N_minus_en_kriteriet

@@ -32,8 +32,8 @@ def struktur_excel_arket():
                    "V [P.U]", "Angle [rad]", "P_gen", "Q_gen", "P_load", "Q_load"],
           "gen": ["name", "type", "type2", "Pmax", "Qmax", "Qmin", "bus", "lat", "lon"],
           "line": ["line_id", "area0", "bus0", "bus1", "length", "Vbase", "lat", "lon",
-                   "R_per_m", "X_per_m", "B_per_m", "name", "eic code"],
-          "trafo": ["transformer_id", "bus0", "bus1", "ratio", "R", "X", "name"],
+                   "R_per_m", "X_per_m", "B_per_m", "name", "eic code","S_max"],
+          "trafo": ["transformer_id", "bus0", "bus1", "ratio", "R", "X", "name","S_max"],
           "link": ["index", "name", "area0", "area1", "bus0", "bus1", "lat", "lon", "Pinj"],
        }
     return REF_STRUKTUR
