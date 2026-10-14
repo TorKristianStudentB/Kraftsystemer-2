@@ -92,6 +92,8 @@ if __name__ == "__main__":
    kjøretid["PP_FD"] = grid.solution.kjoretid
    #---------Kjører lastflytanalyse med FDLF metode-
 
+   print(f"N-1 kriteriet: {grid.N_minus_en()}")
+
 
    #--------Printer resultatene i A--------------
    print(f"spenningen på alt er:\n{A_volt}")

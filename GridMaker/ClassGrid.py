@@ -1,4 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow,excelfilepath, FDLF
 
 
 #----------Making grid class---------------
@@ -33,6 +33,10 @@ class Grid:
    def validating_PP_NR(self):
           from Validating.validating_pandapower_NR_bussklassifisering import validating_PP_NR   # lat import (se over)
           return validating_PP_NR(self) 
+
+   def N_minus_en(self):
+       from FunctionsInGridMaker.N_minus_en import N_minus_en_kriteriet   # lat import (se over)
+       return N_minus_en_kriteriet(excelfilepath)
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
