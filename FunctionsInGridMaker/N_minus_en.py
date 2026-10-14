@@ -8,10 +8,11 @@ def N_minus_en_kriteriet(excelfilepath):
    def oppstart_paa_hovednettet():
       grid_main = MakeGrid(excelfilepath)
       try:
-         grid_main.loadflowsolutionNR()
-         print("Hovednettet uten N-1 kriteriet konvergerte")
+         grid_main.loadflowsolutionNR() 
+         print(f"Lastlytanalysen kjørte, gav svaret: {grid_main.solution.konvergerte}")
       except Exception as e:
          print(f"Det oppstod en feil på hovednettet uten N-1 igangsatt: {e}")
+      
       return grid_main
    grid_main = oppstart_paa_hovednettet()
    #------------tester først på hovednettet--------------

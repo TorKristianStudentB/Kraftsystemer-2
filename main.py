@@ -5,8 +5,8 @@ if __name__ == "__main__":
 
 
    #-------Opretter en A matrise til sammenlignign av resultater-----
-   A_volt = pd.DataFrame(columns=["NR", "DC", "FD", "PP_NR", "PP_DC", "PP_FD"])
-   A_angle = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR","PP_DC", "PP_FD"])
+   A_volt = pd.DataFrame(columns=["NR", "DC", "FD"])#"PP_NR", "PP_DC", "PP_FD"])
+   A_angle = pd.DataFrame(columns=["NR", "DC", "FD"])#,"PP_NR","PP_DC", "PP_FD"])
    #-------Opretter en A matrise til sammenlignign av resultater-----
    iterasjon = {}
    kjøretid = {}
@@ -24,7 +24,7 @@ if __name__ == "__main__":
    iterasjon["NR"] = grid.solution.iterasjoner
    kjøretid["NR"] = grid.solution.kjoretid
    print(grid.solution.pv_to_pq_generators)
-   print("NR til Tor: vellyket")
+   print(f"NR til Tor: {grid.solution.konvergerte}")
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
 
    #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
@@ -37,7 +37,7 @@ if __name__ == "__main__":
    A_angle["DC"] = grid.solution.angle
    iterasjon["DC"] = grid.solution.iterasjoner
    kjøretid["DC"] = grid.solution.kjoretid
-   print("DCLF til Sverre: vellyket")
+   print(f"DCLF til Sverre: {grid.solution.konvergerte}")
    #---------Kjører lastflytanalyse med DC metode-
 
    #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
@@ -50,9 +50,10 @@ if __name__ == "__main__":
    A_angle["FD"] = grid.solution.angle
    iterasjon["FD"] = grid.solution.iterasjoner
    kjøretid["FD"] = grid.solution.kjoretid
-   print("FDLD til Theo: vellyket")
+   print(f"FDLD til Theo: {grid.solution.konvergerte}")
    #---------Kjører lastflytanalyse med FDLF metode-
 
+   """
    #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
    grid = MakeGrid(excelfilepath)
    #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
@@ -91,6 +92,8 @@ if __name__ == "__main__":
    iterasjon["PP_FD"] = grid.solution.iterasjoner
    kjøretid["PP_FD"] = grid.solution.kjoretid
    #---------Kjører lastflytanalyse med FDLF metode-
+   """
+
 
    print(f"N-1 kriteriet: {grid.N_minus_en()}")
 

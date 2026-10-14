@@ -382,7 +382,7 @@ def NewtonRaphson(grid):
 
             #-------sjekker om vi har konvergert-------
             error = np.max(np.abs(deltaPQ))
-            
+            print(error)
             if error <=1e-6:
                 #-------slipper busser som ble klemt for tidlig tilbake til PV, og fortsetter-------
                 k_tilbake=Q_klemt_buss_skal_tilbake_til_PV() if antall_tilbake_til_pv<4*max(len(grid.gen),1) else None
