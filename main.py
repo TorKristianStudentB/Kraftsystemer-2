@@ -27,6 +27,9 @@ if __name__ == "__main__":
    print("NR til Tor: vellyket")
    #---------Kjører lastflytanalyse med Newtons Rapshons metode-
 
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
 
    #---------Kjører lastflytanalyse med DC metode- 
    grid.DCPF()
@@ -37,6 +40,10 @@ if __name__ == "__main__":
    print("DCLF til Sverre: vellyket")
    #---------Kjører lastflytanalyse med DC metode-
 
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+
    #---------Kjører lastflytanalyse med FDLF metode- 
    grid.FDLF()
    A_volt["FD"] = grid.solution.volt
@@ -46,38 +53,7 @@ if __name__ == "__main__":
    print("FDLD til Theo: vellyket")
    #---------Kjører lastflytanalyse med FDLF metode-
 
-   """
-   #---------Kjører lastflytanalyse med FDLF metode- 
-   grid.validating_PP_NR()
-   A_volt["PP_NR"] = grid.solution.volt
-   A_angle["PP_NR"] = grid.solution.angle
-   print("PP_NR til Vegard: vellyket")
-   #---------Kjører lastflytanalyse med FDLF metode-
-
-   #---------Kjører lastflytanalyse med FDLF metode- 
-   grid.validating_PP_NR2()
-   A_volt["PP_NR2"] = grid.solution.volt
-   A_angle["PP_NR2"] = grid.solution.angle
-   print("PP_NR2 til Vegard: vellyket")
-   #---------Kjører lastflytanalyse med FDLF metode-
-
-
-   #---------Kjører lastflytanalyse med FDLF metode- 
-   grid.validating_PP_DC()
-   A_volt["PP_DC"] = grid.solution.volt
-   A_angle["PP_DC"] = grid.solution.angle
-   print("PP_DC til Andreas: vellyket")
-   #---------Kjører lastflytanalyse med FDLF metode-
-
    
-   #---------Kjører lastflytanalyse med FDLF metode- 
-   grid.validating_PP_FDPF()
-   A_volt["PP_FD"] = grid.solution.volt
-   A_angle["PP_FD"] = grid.solution.angle
-   print("PP_DC til Håkon: vellyket")
-   #---------Kjører lastflytanalyse med FDLF metode-
-      
-   """
    #--------Printer resultatene i A--------------
    print(f"spenningen på alt er:\n{A_volt}")
    print("\n")

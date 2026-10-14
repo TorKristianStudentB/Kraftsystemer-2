@@ -2,7 +2,6 @@ from GridMaker.Imports import np,pd,Path,sys,time
 
 #-------------Fast decoupled load flow kode---------------
 def FDLF(grid):
-
    #--------oppstart for effektivitet------------
    def oppstart():
          Y=grid.admittansmatrise()

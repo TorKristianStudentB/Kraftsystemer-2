@@ -17,8 +17,8 @@ def cutsem(grid):
    for l in (grid.line):
       i=konverter_identifikasjonummer(l.Frombus)
       j=konverter_identifikasjonummer(l.Tobus)
-      yij=l.admittans()
-      yshunt=complex(0,l.B)
+      yij = l.admittans()
+      yshunt = complex(0,l.B)       
       #---------ikke diagonal-------
       Y[i,j]=Y[i,j]+(-1*yij)
       Y[j,i]=Y[j,i]+ (-1*yij)

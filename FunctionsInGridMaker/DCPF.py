@@ -167,6 +167,7 @@ def dc_power_flow(grid):
       for i in range(len(grid.bus)):
          grid.bus[i].Angle = delta[i]
    #---------Lagrer vinkler-------------------
+   lagrer_beregneden_vinklene_paa_bussen()
 
 
    #-------------Bygger formatering --------------------------------------------

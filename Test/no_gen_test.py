@@ -1,8 +1,7 @@
 from GridMaker.Imports import pyt
 
 #---------------Kjører og ser om null i generator får samme svar som 0.0000001---------
-def test_no_gen_NR(grid_g,grid_h):
-
+def test_no_gen_NR(grid_g, grid_h):
     g = grid_g
     h = grid_h
 

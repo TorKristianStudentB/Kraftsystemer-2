@@ -86,6 +86,7 @@ Objektstruktur
    ├── .DCPF()                    -> lastflyt, DC (kun aktiv effekt og vinkler)
    ├── .FDLF()                    -> lastflyt, fast decoupled
    ├── .validating_PP_NR()        -> kjører samme nett i pandapower (AC), lagrer i grid.solution
+   ├── .validating_PP_FDPF()      -> kjører samme nett i pandapower (FDPF), lagrer i grid.solution
    └── .validating_PP_DC()        -> kjører samme nett i pandapower (DC), lagrer i grid.solution
 
 

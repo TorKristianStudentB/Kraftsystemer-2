@@ -13,11 +13,11 @@ def NewtonRaphson(grid):
    def oppstart():
         Y=grid.admittansmatrise() #la den her for at ting går fortere
         forste_gang=True
-        return Y,forste_gang 
+        klemte=[]
+        Vsett=[b.Volt for b in grid.bus]
+        return Y,forste_gang,klemte,Vsett
    #-------oppstartm lage Y matrisen----------- 
-   Y,forste_gang = oppstart()
-   klemte=[]
-   Vsett=[b.Volt for b in grid.bus]
+   Y,forste_gang,klemte,Vsett = oppstart()
    #-------tilstand som huskes mellom iterasjonene-------
 
 
@@ -161,8 +161,7 @@ def NewtonRaphson(grid):
 
    
    #---------------Lager jacobian matrisen, bruker busclassifier til å strukturere den----------------
-   def jacobian(busPVPQ):
-    Y = grid.admittansmatrise()
+   def jacobian(busPVPQ,Y):
     n = len(grid.bus)
     #----------pi derivert mhp. angle i-------------------
     def dpi_ddeltai(i):
@@ -360,7 +359,7 @@ def NewtonRaphson(grid):
 
 
    #------------Løser systemet med NR----------------------------------------------
-   def finalsolver(P_scheduled, Q_scheduled):
+   def finalsolver(P_scheduled, Q_scheduled,Y):
         i=0
         ferdig=False
         solution=True
@@ -400,7 +399,7 @@ def NewtonRaphson(grid):
                 break
 
             #-------ny jacobian hver iterasjon-------
-            J=jacobian(busPVPQ)
+            J=jacobian(busPVPQ,Y)
 
             #----------sjekker om den divigerer, og gir ikke konvererer----------
             try:
@@ -465,7 +464,7 @@ def NewtonRaphson(grid):
 
         return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower, flagg
    #------------Løser systemet med NR----------------------------------------------
-   konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower, flagg = finalsolver(P_scheduled, Q_scheduled)
+   konvergerte , iterasjon , deltaPQ, flow_in_line, pv_to_pq_generators, power, qower, flagg = finalsolver(P_scheduled, Q_scheduled,Y)
     #---------------Loader løsningen som et eget object under hovednettet-----------
 
 

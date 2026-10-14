@@ -3,6 +3,8 @@ from GridMaker.ClassGrid import Grid   # direkte, ikke via Imports (unngår sirk
 
 #---------Start: Funskjon som fyller inn i objektet grid fra excel arket n490--------
 def MakeGrid(ExcelSheet):
+
+   
    df=pd.read_excel(ExcelSheet, sheet_name=None)
 
 
@@ -98,8 +100,9 @@ def MakeGrid(ExcelSheet):
    def konverter_til_PU():
         Sbase = busDF["S_base [MVA] "].iloc[0]    # fordi MVA
         Zbase = lineDF["Vbase"]**2 / Sbase        # per linje (Series)
-        lineDF["R"] = lineDF["R"] / Zbase
-        lineDF["X"] = lineDF["X"] / Zbase
+        lineDF["R_per_m"] = lineDF["R_per_m"] / Zbase * lineDF["length"]
+        lineDF["X_per_m"] = lineDF["X_per_m"] / Zbase * lineDF["length"]
+        lineDF["B_per_m"] = lineDF["B_per_m"] * Zbase * lineDF["length"] #annerledes fordi det er sussceptans
         busDF["P_gen"] = busDF["P_gen"] / Sbase
         busDF["Q_gen"] = busDF["Q_gen"] / Sbase
         busDF["P_load"] = busDF["P_load"] / Sbase
@@ -169,11 +172,12 @@ def MakeGrid(ExcelSheet):
          for i in range(len(lineDF)):
 
             b = Grid.line(
+               Vbase      = int(lineDF["Vbase"].iloc[i]),
                lineNumber = int(lineDF["line_id"].iloc[i]),
                Name       = str(lineDF["name"].iloc[i]),
-               R          = float(lineDF["R"].iloc[i]),
-               X          = float(lineDF["X"].iloc[i]),
-               B          = float(lineDF["B"].iloc[i]),
+               R          = float(lineDF["R_per_m"].iloc[i]),
+               X          = float(lineDF["X_per_m"].iloc[i]),
+               B          = float(lineDF["B_per_m"].iloc[i]),
                Frombus    = int(lineDF["bus0"].iloc[i]),
                Tobus      = int(lineDF["bus1"].iloc[i]),
                lenght     = float(lineDF["length"].iloc[i]),

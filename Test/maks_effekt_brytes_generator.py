@@ -1,0 +1,1 @@
+#----------sjekker om generatorene maks effekt overstiges----------------

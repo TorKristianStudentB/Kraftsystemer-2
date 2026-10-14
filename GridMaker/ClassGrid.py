@@ -1,4 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF, excelfilepath
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
 
 
 #----------Making grid class---------------
@@ -36,8 +36,7 @@ class Grid:
 
    def validating_PP_NR2(self):
           from Validating.validating_pandapower_NR_bussklassifisering2 import validating_PP_NR2   # lat import (se over)
-          return validating_PP_NR2(self)
-
+          return validating_PP_NR2(self) 
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
@@ -128,7 +127,8 @@ class Grid:
       Tobus:int
       lenght:float
 
-      def __init__(self,lineNumber,Name,R,X,B,Frombus,Tobus,lenght,eic_code):
+      def __init__(self,Vbase,lineNumber,Name,R,X,B,Frombus,Tobus,lenght,eic_code):
+            self.Vbase = Vbase
             self.lineNumber = lineNumber
             self.Name = Name
             self.R = R
@@ -139,9 +139,9 @@ class Grid:
             self.lenght = lenght
             self.eic_code = eic_code
 
-
       def admittans(self):
          return 1/complex(self.R, self.X)
+
 
    
 #----------lines end----------------------

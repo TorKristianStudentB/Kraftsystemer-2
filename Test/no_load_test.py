@@ -19,6 +19,8 @@ def test_no_load_NR(grid_g,grid_h):
     g.loadflowsolutionNR()
     h.loadflowsolutionNR()
 
+    print(g.solution.volt)
+    print(h.solution.volt)
 
     assert g.solution.konvergerte == False
     assert h.solution.konvergerte == False
