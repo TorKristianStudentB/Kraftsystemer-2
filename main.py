@@ -24,3 +24,8 @@ if __name__ == "__main__":
    #-----------------Lager rapport om løsningene----------------
 
 #----------Main Running---------------
+for linje in grid.line:
+    print(
+        f"Linje {linje.Frombus} -> {linje.Tobus}: "
+        f"R = {linje.R:.8f} pu, X = {linje.X:.8f} pu"
+    )
