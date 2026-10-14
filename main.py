@@ -5,8 +5,8 @@ if __name__ == "__main__":
 
 
    #-------Opretter en A matrise til sammenlignign av resultater-----
-   A_volt = pd.DataFrame(columns=["NR", "DC", "FD"])#,"PP_NR", "PP_NR2", "PP_DC", "PP_FD"])
-   A_angle = pd.DataFrame(columns=["NR", "DC", "FD"])#,"PP_NR", "PP_NR2","PP_DC", "PP_FD"])
+   A_volt = pd.DataFrame(columns=["NR", "DC", "FD", "PP_NR", "PP_DC", "PP_FD"])
+   A_angle = pd.DataFrame(columns=["NR", "DC", "FD","PP_NR","PP_DC", "PP_FD"])
    #-------Opretter en A matrise til sammenlignign av resultater-----
    iterasjon = {}
    kjøretid = {}
@@ -15,6 +15,7 @@ if __name__ == "__main__":
    #---------lager nettet til klassen grid fra excelarket-------
    grid = MakeGrid(excelfilepath)
    #---------lager nettet til klassen grid fra excelarket-------
+   
    
 
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
@@ -53,7 +54,43 @@ if __name__ == "__main__":
    print("FDLD til Theo: vellyket")
    #---------Kjører lastflytanalyse med FDLF metode-
 
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_NR()
+   A_volt["PP_NR"] = grid.solution.volt
+   A_angle["PP_NR"] = grid.solution.angle
+   iterasjon["PP_NR"] = grid.solution.iterasjoner
+   kjøretid["PP_NR"] = grid.solution.kjoretid
+   #---------Kjører lastflytanalyse med FDLF metode-
+
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_NR()
+   A_volt["PP_FD"] = grid.solution.volt
+   A_angle["PP_FD"] = grid.solution.angle
+   iterasjon["PP_FD"] = grid.solution.iterasjoner
+   kjøretid["PP_FD"] = grid.solution.kjoretid
+   #---------Kjører lastflytanalyse med FDLF metode-
+
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+
    
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_DC()
+   A_volt["PP_DF"] = grid.solution.volt
+   A_angle["PP_DF"] = grid.solution.angle
+   iterasjon["PP_DF"] = grid.solution.iterasjoner
+   kjøretid["PP_DF"] = grid.solution.kjoretid
+   #---------Kjører lastflytanalyse med FDLF metode-
+
    #--------Printer resultatene i A--------------
    print(f"spenningen på alt er:\n{A_volt}")
    print("\n")

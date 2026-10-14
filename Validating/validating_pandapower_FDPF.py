@@ -1,9 +1,14 @@
 from GridMaker.Imports import pp,np,excelfilepath
 from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
 import pandapower.topology as top
+import time
 
 #-----------validating pandapower fast decoupled load flow-----------------
 def validating_PP_FDPF(grid):
+
+   #----------starter en tidsklokke på kjøringen-----------
+   start_time = time.perf_counter()
+   #----------starter en tidsklokke på kjøringen-----------
 
    def hent_bustyper(grid):
       """
@@ -253,6 +258,7 @@ def validating_PP_FDPF(grid):
          iterasjoner=iterasjoner, mismatch=mismatch, konvergerte=True,
          pv_to_pq_generators=[], power=np.array([]), qower=np.array([]),
          type=bustyper,
+         kjoretid = time.perf_counter() - start_time,
       )
 
 

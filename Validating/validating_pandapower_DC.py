@@ -1,8 +1,12 @@
 from GridMaker.Imports import pp,np,excelfilepath
 from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
-
+import time
 #--------------validerer med pandapower på DC--------------------
 def validating_PP_DC(grid):   
+
+   #----------starter en tidsklokke på kjøringen-----------
+   start_time = time.perf_counter()
+   #----------starter en tidsklokke på kjøringen-----------
 
    # definerer regionen som NO3 for å få trøndelagsområdet.
    region_buses = [b for b in grid.bus if b.bidz == "NO3"]
@@ -53,6 +57,7 @@ def validating_PP_DC(grid):
          pfe_kw=0,
          i0_percent=0,
          name=t.Name,
+         kjoretid = time.perf_counter() - start_time,
       )
 
    # Setter den største generatoren som slack-bus
@@ -81,7 +86,8 @@ def validating_PP_DC(grid):
          pv_to_pq_generators=None,
          power=None,
          qower=None,
-         type="PP_DC"
+         type="PP_DC",
+         kjoretid = time.perf_counter() - start_time,
    )
    #---------------Loader løsningen som et eget object under hovednettet-----------
 #--------------validerer med pandapower på DC--------------------                            

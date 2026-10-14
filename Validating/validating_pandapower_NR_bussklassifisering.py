@@ -1,373 +1,465 @@
 
 
+#Denne koden klassifiserer en buss som PV om det er en generatoren er tilkoblet, selv om generatoren er av eller har null i verdier.
 
-#Denne koden klassifiserer en buss på PV om det ikke er noe verdier på generatoren, ikke om den er tilkoblet
+import sys
+from pathlib import Path
+import time
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from GridMaker.Imports import pd,np,pp,excelfilepath
-from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
-
-#---------------validerer nettet med pandapower--------------
-def validating_PP_NR(excel_file,grid):
-   IMPEDANCE_UNIT="ohm"   # linjenes R og X står i ohm i excelarket (trafoenes R og X står allerede i pu)
-   #---------KONVERTER R OG X TIL P.U.------------------------
-   def impedance_to_pu(r, x, vbase_kv, sbase_mva):
-
-      r = float(r)
-      x = float(x)
-
-      # Verdiene er allerede i p.u.
-      if IMPEDANCE_UNIT == "pu":
-         return r, x
-
-      # Verdiene er i ohm
-      elif IMPEDANCE_UNIT == "ohm":
-
-         zbase = (vbase_kv ** 2) / sbase_mva
-
-         r_pu = r / zbase
-         x_pu = x / zbase
-
-         return r_pu, x_pu
-
-      else:
-         raise ValueError(
-               "IMPEDANCE_UNIT må være enten 'pu' eller 'ohm'"
-         )
-   #---------KONVERTER R OG X TIL P.U.------------------------
+from GridMaker.Imports import pd,np,pp
+from GridMaker.ReadExcelGrid import MakeGrid   # direkte import for å unngå sirkulær import
 
 
-   #---------HOVEDFUNKSJON-----------------------------------
-   def run_excel_with_pandapower(excel_file):
+#-------------Pandapower NR validering-------------
+def validating_PP_NR(grid):
+
+   #----------starter en tidsklokke på kjøringen-----------
+   start_time = time.perf_counter()
+   #----------starter en tidsklokke på kjøringen-----------
+
+   #---------Kjører pandapower NR---------
+   def run_excel_with_pandapower():
 
 
-      # --------------------------------------------------
-      # 1. Les Excel
-      # --------------------------------------------------
-
-
-      df = pd.read_excel(
-         excel_file,
-         sheet_name=None
-      )
-
-      bus_df = df["bus"]
-      line_df = df["line"]
-      gen_df = df["gen"]
-      trafo_df = df["trafo"]
-
-      # --------------------------------------------------
-      # 2. Les systembase fra Excel
-      # --------------------------------------------------
-
-
-      sbase_values = (
-         bus_df["S_base [MVA] "]
-         .dropna()
-         .unique()
-      )
-
-      if len(sbase_values) == 0:
-         raise ValueError(
-               "Fant ingen verdi i kolonnen 'S_base [MVA]'."
-         )
-
-      if len(sbase_values) != 1:
-         raise ValueError(
-               f"Fant flere S_base-verdier i nettet: {sbase_values}"
-         )
-
-      SBASE_MVA = float(sbase_values[0])
-
-      # --------------------------------------------------
-      # 3. Lag tomt pandapower-nett
-      # --------------------------------------------------
+      #---------Systembase og Y-bus---------
+      SBASE_MVA = float(grid.Base.Sbase)
+      Y = grid.admittansmatrise()
 
       net = pp.create_empty_network(
          sn_mva=SBASE_MVA
       )
 
 
-      # --------------------------------------------------
-      # 4. Lag busser
-      # --------------------------------------------------
+      #---------Klassifiserer bussene som i egen NR---------
+      bus_types = []
 
+      for i, bus in enumerate(grid.bus):
+
+         if i == 0:
+            bus_types.append("ref")
+
+         elif np.all(np.isclose(Y[i, :], 0)):
+            bus_types.append("alene")
+
+         elif any(
+            gen.bus == bus.busNumber
+            for gen in grid.gen
+         ):
+            bus_types.append("PV")
+
+         else:
+            bus_types.append("PQ")
+
+
+      #---------Oppretter busser i pandapower---------
       bus_map = {}
 
-      for _, row in bus_df.iterrows():
+      for i, bus in enumerate(grid.bus):
 
-         bus_number = int(row["bus_id"])
-
-         pp_bus = pp.create_bus(
-               net,
-               vn_kv=float(row["Vbase"]),
-               name=row["name"]
+         bus_map[int(bus.busNumber)] = pp.create_bus(
+            net,
+            vn_kv=float(bus.Vbase),
+            name=str(bus.Name),
+            in_service=(bus_types[i] != "alene")
          )
 
-         bus_map[bus_number] = pp_bus
 
+      #---------Laster---------
+      # grid bruker pu, pandapower bruker MW/MVAr
+      for i, bus in enumerate(grid.bus):
 
-      # --------------------------------------------------
-      # 5. Lag laster
-      # --------------------------------------------------
+         if bus_types[i] == "alene":
+            continue
 
-      for _, row in bus_df.iterrows():
-
-         bus_number = int(row["bus_id"])
-
-         p_load = float(row["P_load"])
-         q_load = float(row["Q_load"])
+         p_load = float(bus.P_load) * SBASE_MVA
+         q_load = float(bus.Q_load) * SBASE_MVA
 
          if p_load != 0 or q_load != 0:
 
-               pp.create_load(
-                  net,
-                  bus=bus_map[bus_number],
-                  p_mw=p_load,
-                  q_mvar=q_load,
-                  name=f"Load bus {bus_number}"
+            pp.create_load(
+               net,
+               bus=bus_map[int(bus.busNumber)],
+               p_mw=p_load,
+               q_mvar=q_load,
+               name=f"Load bus {bus.busNumber}"
+            )
+
+
+      #---------Referansebuss---------
+      # Samme referanse som i egen NR
+      slack = grid.bus[0]
+
+      pp.create_ext_grid(
+         net,
+         bus=bus_map[int(slack.busNumber)],
+         vm_pu=float(abs(slack.Volt)),
+         va_degree=float(np.degrees(slack.Angle)),
+         name=f"Slack bus {slack.busNumber}"
+      )
+
+
+      #---------Generatorer---------
+      for i, bus in enumerate(grid.bus):
+
+         if bus_types[i] == "alene":
+            continue
+
+
+         #-----PV-busser-----
+         if bus_types[i] == "PV":
+
+            gens_here = [
+               gen
+               for gen in grid.gen
+               if gen.bus == bus.busNumber
+            ]
+
+            p_gen = float(bus.P_gen) * SBASE_MVA
+
+
+            # Summerer Q-grensene for generatorene på bussen
+            has_q_limits = (
+               len(gens_here) > 0
+               and all(
+                  gen.Q_min is not None
+                  and gen.Q_max is not None
+                  for gen in gens_here
                )
+            )
 
 
-      # --------------------------------------------------
-      # 6. Slack + generatorer
-      # --------------------------------------------------
+            if has_q_limits:
 
+               q_min = sum(
+                  float(gen.Q_min)
+                  for gen in gens_here
+               ) * SBASE_MVA
 
-      #----Q-grenser pr. buss (summen av generatorene på bussen), samme som i NR-koden----
-      q_grenser = {}
-      if "Qmax" in gen_df.columns and "Qmin" in gen_df.columns:
-         for _, g_row in gen_df.iterrows():
-            b_nr = int(g_row["bus"])
-            q_max, q_min = q_grenser.get(b_nr, (0.0, 0.0))
-            q_grenser[b_nr] = (q_max + float(g_row["Qmax"]), q_min + float(g_row["Qmin"]))
+               q_max = sum(
+                  float(gen.Q_max)
+                  for gen in gens_here
+               ) * SBASE_MVA
 
-      slack_created = False
-
-      for _, row in bus_df.iterrows():
-
-         bus_number = int(row["bus_id"])
-
-         p_gen = float(row["P_gen"])
-
-         if p_gen == 0:
-               continue
-
-         vm_pu = float(row["V [P.U]"])
-
-         # Første generatorbuss blir foreløpig slack
-         if not slack_created:
-
-               angle_rad = float(row["Angle [rad]"])
-
-               pp.create_ext_grid(
-                  net,
-                  bus=bus_map[bus_number],
-                  vm_pu=vm_pu,
-                  va_degree=np.degrees(angle_rad),
-                  name=f"Slack bus {bus_number}"
-               )
-
-
-
-               slack_created = True
-
-         # Resten blir PV-busser
-         else:
 
                pp.create_gen(
                   net,
-                  bus=bus_map[bus_number],
+                  bus=bus_map[int(bus.busNumber)],
                   p_mw=p_gen,
-                  vm_pu=vm_pu,
-                  max_q_mvar=q_grenser[bus_number][0] if bus_number in q_grenser else np.nan,
-                  min_q_mvar=q_grenser[bus_number][1] if bus_number in q_grenser else np.nan,
-                  name=f"Generator bus {bus_number}"
+                  vm_pu=float(abs(bus.Volt)),
+                  min_q_mvar=q_min,
+                  max_q_mvar=q_max,
+                  name=", ".join(
+                     str(gen.name)
+                     for gen in gens_here
+                  )
+               )
+
+            else:
+
+               pp.create_gen(
+                  net,
+                  bus=bus_map[int(bus.busNumber)],
+                  p_mw=p_gen,
+                  vm_pu=float(abs(bus.Volt)),
+                  name=", ".join(
+                     str(gen.name)
+                     for gen in gens_here
+                  )
                )
 
 
-      # --------------------------------------------------
-      # 7. Lag linjer
-      # --------------------------------------------------
+         #-----PQ-busser med produksjon-----
+         elif bus_types[i] == "PQ":
+
+            p_gen = float(bus.P_gen) * SBASE_MVA
+            q_gen = float(bus.Q_gen) * SBASE_MVA
+
+            if p_gen != 0 or q_gen != 0:
+
+               pp.create_sgen(
+                  net,
+                  bus=bus_map[int(bus.busNumber)],
+                  p_mw=p_gen,
+                  q_mvar=q_gen,
+                  name=f"Generator bus {bus.busNumber}"
+               )
 
 
-      for _, row in line_df.iterrows():
+      #---------Linjer---------
+      # R og X ligger allerede i pu etter MakeGrid
+      line_pp_indices = []
 
-         from_bus_number = int(row["bus0"])
-         to_bus_number = int(row["bus1"])
+      for line in grid.line:
 
-         vbase_kv = float(row["Vbase"])
-
-         r_pu, x_pu = impedance_to_pu(
-               row["R"],
-               row["X"],
-               vbase_kv,
-               SBASE_MVA
+         idx = pp.create_impedance(
+            net,
+            from_bus=bus_map[int(line.Frombus)],
+            to_bus=bus_map[int(line.Tobus)],
+            rft_pu=float(line.R),
+            xft_pu=float(line.X),
+            rtf_pu=float(line.R),
+            xtf_pu=float(line.X),
+            sn_mva=SBASE_MVA,
+            name=str(line.Name)
          )
 
-         pp.create_impedance(
+         line_pp_indices.append(idx)
+
+
+         # Linjesusceptans fordeles på begge ender
+         B = float(line.B)
+
+         if B != 0:
+
+            q_shunt = -(B / 2) * SBASE_MVA
+
+            pp.create_shunt(
                net,
+               bus=bus_map[int(line.Frombus)],
+               q_mvar=q_shunt,
+               p_mw=0
+            )
 
-               from_bus=bus_map[from_bus_number],
-               to_bus=bus_map[to_bus_number],
-
-               rft_pu=r_pu,
-               xft_pu=x_pu,
-
-               rtf_pu=r_pu,
-               xtf_pu=x_pu,
-
-               sn_mva=SBASE_MVA,
-
-               name=row["name"]
-         )
+            pp.create_shunt(
+               net,
+               bus=bus_map[int(line.Tobus)],
+               q_mvar=q_shunt,
+               p_mw=0
+            )
 
 
+      #---------Transformatorer---------
+      bus_by_number = {
+         int(bus.busNumber): bus
+         for bus in grid.bus
+      }
 
-      # --------------------------------------------------
-      # 8. Lag transformatorer
-      # --------------------------------------------------
 
-      for _, row in trafo_df.iterrows():
+      for trafo in grid.trafo:
 
-         bus0_number = int(row["bus0"])
-         bus1_number = int(row["bus1"])
+         from_nr = int(trafo.Frombus)
+         to_nr = int(trafo.Tobus)
 
-         bus0 = bus_map[bus0_number]
-         bus1 = bus_map[bus1_number]
+         if (
+            bus_by_number[from_nr].Vbase
+            >= bus_by_number[to_nr].Vbase
+         ):
 
-         # Finn spenningsnivåene fra bus-tabellen
-         v0 = float(
-               bus_df.loc[
-                  bus_df["bus_id"] == bus0_number,
-                  "Vbase"
-               ].iloc[0]
-         )
-
-         v1 = float(
-               bus_df.loc[
-                  bus_df["bus_id"] == bus1_number,
-                  "Vbase"
-               ].iloc[0]
-         )
-
-         # Finn HV- og LV-side
-         if v0 >= v1:
-
-               hv_bus = bus0
-               lv_bus = bus1
-
-               vn_hv_kv = v0
-               vn_lv_kv = v1
+            hv_nr = from_nr
+            lv_nr = to_nr
 
          else:
 
-               hv_bus = bus1
-               lv_bus = bus0
-
-               vn_hv_kv = v1
-               vn_lv_kv = v0
+            hv_nr = to_nr
+            lv_nr = from_nr
 
 
-         # Konverter trafoimpedans
-         #----trafoenes R og X står allerede i pu i excelarket (MakeGrid konverterer dem heller ikke), så de brukes direkte----
-         r_pu, x_pu = float(row["R"]), float(row["X"])
-
-         z_pu = np.sqrt(
-               r_pu**2 + x_pu**2
-         )
-
-         vk_percent = z_pu * 100
-         vkr_percent = r_pu * 100
-
+         R = float(trafo.R)
+         X = float(trafo.X)
 
          pp.create_transformer_from_parameters(
-               net,
+            net,
 
-               hv_bus=hv_bus,
-               lv_bus=lv_bus,
+            hv_bus=bus_map[hv_nr],
+            lv_bus=bus_map[lv_nr],
 
-               sn_mva=SBASE_MVA,
+            sn_mva=SBASE_MVA,
 
-               vn_hv_kv=vn_hv_kv,
-               vn_lv_kv=vn_lv_kv,
+            vn_hv_kv=float(
+               bus_by_number[hv_nr].Vbase
+            ),
 
-               vk_percent=vk_percent,
-               vkr_percent=vkr_percent,
+            vn_lv_kv=float(
+               bus_by_number[lv_nr].Vbase
+            ),
 
-               pfe_kw=0,
-               i0_percent=0,
+            vk_percent=np.sqrt(R**2 + X**2) * 100,
+            vkr_percent=R * 100,
 
-               shift_degree=0,
+            pfe_kw=0,
+            i0_percent=0,
 
-               name=row["name"]
+            shift_degree=0,
+
+            name=str(trafo.Name)
          )
 
 
-
-      # --------------------------------------------------
-      # 10. Kjør Newton-Raphson
-      # --------------------------------------------------
-
+      #---------Kjører pandapower Newton-Raphson---------
       pp.runpp(
          net,
          algorithm="nr",
          init="flat",
          calculate_voltage_angles=True,
          enforce_q_lims=True,
+         tolerance_mva=1e-6,
          max_iteration=100,
          numba=False
       )
 
 
+      #---------Henter bussresultater---------
+      # Lagrer i samme bussrekkefølge som grid.bus
+      volt = []
+      angle = []
+      power = []
+      qower = []
+
+      for i, bus in enumerate(grid.bus):
+
+         if bus_types[i] == "alene":
+
+            volt.append(float(abs(bus.Volt)))
+            angle.append(float(bus.Angle))
+
+            power.append(0.0)
+            qower.append(0.0)
+
+            continue
 
 
-      # --------------------------------------------------
-      # 11. Resultater
-      # --------------------------------------------------
+         pp_bus = bus_map[int(bus.busNumber)]
+         result = net.res_bus.loc[pp_bus]
 
-      results = net.res_bus[
-         [
-               "vm_pu",
-               "va_degree",
-               "p_mw",
-               "q_mvar"
-         ]
-      ].copy()
 
-      reverse_bus_map = {
-         pp_index: bus_number
-         for bus_number, pp_index in bus_map.items()
-      }
+         volt.append(
+            float(result["vm_pu"])
+         )
 
-      results.insert(
-         0,
-         "bus_id",
-         [
-               reverse_bus_map[index]
-               for index in results.index
-         ]
-      )
+         angle.append(
+            np.radians(
+               float(result["va_degree"])
+            )
+         )
 
-      #------------------------------------------------
-      #------------------------------------------------
-      # FYLL INN DENNE UNDER; SÅ SKAL KODEN FUNGERE :)
-      #------------------------------------------------
-      #------------------------------------------------
 
-      #---------------Loader løsningen som et eget object under hovednettet-----------
+         # Bytter fortegn til samme konvensjon som egen NR
+         # og gjør MW/MVAr tilbake til pu
+         power.append(
+            -float(result["p_mw"]) / SBASE_MVA
+         )
+
+         qower.append(
+            -float(result["q_mvar"]) / SBASE_MVA
+         )
+
+
+      #---------Linjeflyt---------
+      flow_in_line = []
+
+      for idx in line_pp_indices:
+
+         result = net.res_impedance.loc[idx]
+
+         S = complex(
+            float(result["p_from_mw"]) / SBASE_MVA,
+            float(result["q_from_mvar"]) / SBASE_MVA
+         )
+
+         flow_in_line.append(S)
+
+
+      #---------Antall iterasjoner---------
+      try:
+
+         iterasjoner = int(
+            net["_ppc"]["iterations"]
+         )
+
+      except Exception:
+
+         iterasjoner = None
+
+
+      #---------Generatorer som treffer Q-grense---------
+      pv_to_pq_generators = []
+
+      if len(net.gen) > 0:
+
+         for idx, gen_result in net.res_gen.iterrows():
+
+            q = float(
+               gen_result["q_mvar"]
+            )
+
+            q_min = net.gen.loc[
+               idx,
+               "min_q_mvar"
+            ]
+
+            q_max = net.gen.loc[
+               idx,
+               "max_q_mvar"
+            ]
+
+
+            if (
+               not np.isnan(q_max)
+               and np.isclose(
+                  q,
+                  q_max,
+                  atol=1e-6
+               )
+            ):
+
+               pv_to_pq_generators.append(
+                  str(
+                     net.gen.loc[
+                        idx,
+                        "name"
+                     ]
+                  )
+               )
+
+
+            elif (
+               not np.isnan(q_min)
+               and np.isclose(
+                  q,
+                  q_min,
+                  atol=1e-6
+               )
+            ):
+
+               pv_to_pq_generators.append(
+                  str(
+                     net.gen.loc[
+                        idx,
+                        "name"
+                     ]
+                  )
+               )
+
+
+      #---------Lagrer pandapower-løsningen i grid---------
       grid.solution = grid.__class__.Solution(
-            volt=np.array(results["vm_pu"]),
-            angle=np.radians(np.array(results["va_degree"])),   # radianer, som NR, DC og FD
-            iterasjoner=None,
-            mismatch=None,
-            konvergerte=None,
-            flow_in_line=None,
-            pv_to_pq_generators=None,
-            power=np.array(results["p_mw"]),
-            qower=np.array(results["q_mvar"]),
-            type="PP_NR"
+         volt=np.array(volt),
+
+         angle=np.array(angle),
+
+         iterasjoner=iterasjoner,
+
+         mismatch=None,
+
+         konvergerte=bool(net.converged),
+
+         flow_in_line=np.array(flow_in_line),
+
+         pv_to_pq_generators=pv_to_pq_generators,
+
+         power=np.array(power),
+
+         qower=np.array(qower),
+
+         type="PP_NR",
+
+         kjoretid = time.perf_counter() - start_time,
       )
-   #---------HOVEDFUNKSJON-----------------------------------
-   run_excel_with_pandapower(excel_file)
-#---------------validerer nettet med pandapower--------------
+
+
+   #---------Kjører valideringen---------
+   run_excel_with_pandapower()
+#---------------Pandapower NR validering--------------
