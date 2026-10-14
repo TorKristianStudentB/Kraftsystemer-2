@@ -4,7 +4,7 @@ from GridMaker.Imports import MakeGrid, Grid, np, validating,  lag_rapport, Path
 
 
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
-ExcelSheet = Path.cwd() / "Grid" / "test_trøndelagsnettet.xlsx"
+ExcelSheet = Path.cwd() / "Grid" / "test_trøndelagsnettet.xlsx1"
 #-----------------Her legges inn excelarket som inneholder nettet som skal leses-----------------
 
 
@@ -24,8 +24,8 @@ if __name__ == "__main__":
    #-----------------Lager rapport om løsningene----------------
 
 #----------Main Running---------------
-for linje in grid.line:
+for line in grid.line:
     print(
-        f"Linje {linje.Frombus} -> {linje.Tobus}: "
-        f"R = {linje.R:.8f} pu, X = {linje.X:.8f} pu"
+        f"Linje {line.Frombus} -> {line.Tobus}: "
+        f"R = {line.R*line.lenght:.8f} pu, X = {line.X*line.lenght:.8f} pu"
     )
