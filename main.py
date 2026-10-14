@@ -15,8 +15,7 @@ if __name__ == "__main__":
    #---------lager nettet til klassen grid fra excelarket-------
    grid = MakeGrid(excelfilepath)
    #---------lager nettet til klassen grid fra excelarket-------
-   
-   
+
 
    #---------Kjører lastflytanalyse med Newtons Rapshons metode- 
    grid.loadflowsolutionNR()
