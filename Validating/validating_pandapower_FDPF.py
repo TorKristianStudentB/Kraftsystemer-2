@@ -1,6 +1,8 @@
-from GridMaker.Imports import pp,np,excelfilepath
+from GridMaker.Imports import pd,pp,np,excelfilepath
 from GridMaker.ReadExcelGrid import MakeGrid   # direkte, ikke via Imports (unngår sirkulær import)
 import pandapower.topology as top
+import copy
+import math
 import time
 
 #-----------validating pandapower fast decoupled load flow-----------------
@@ -233,6 +235,8 @@ def validating_PP_FDPF(grid):
                flow_in_line=np.array([]), iterasjoner=None, mismatch=np.array([]),
                konvergerte=False, pv_to_pq_generators=[],
                power=np.array([]), qower=np.array([]),
+               type=bustyper,
+               kjoretid=time.perf_counter() - start_time,
          )
          return
 
@@ -254,12 +258,33 @@ def validating_PP_FDPF(grid):
       mismatch = beregn_mismatch(grid, net, bus_map, bustyper, slack_nummer, sbase)
 
       grid.solution = grid.__class__.Solution(
-         volt=volt, angle=angle, flow_in_line=np.array([]),
+         volt=volt, 
+         angle=angle, 
+         flow_in_line=np.array([]),
          iterasjoner=iterasjoner, mismatch=mismatch, konvergerte=True,
          pv_to_pq_generators=[], power=np.array([]), qower=np.array([]),
          type=bustyper,
          kjoretid = time.perf_counter() - start_time,
       )
+
+
+   def skriv_nettoppsummering(net, sbase):
+      print(f"\nPandapower-nett: {len(net.bus)} busser, {len(net.impedance)} linjer, "
+            f"{len(net.trafo)} trafoer, {len(net.load)} laster, {len(net.gen)} generatorer, "
+            f"{len(net.shunt)} shunter, Sbase = {sbase} MVA")
+
+
+   def skriv_resultater(grid, net, bus_map, omrade):
+      """Skriver spenning og vinkel for busser i budområdet (eller alle hvis omrade er None)."""
+      for bus in grid.bus:
+         if omrade is not None and bus.bidz != omrade:
+            continue
+         idx = bus_map[bus.busNumber]
+         if not net.bus.at[idx, "in_service"]:
+            continue
+         print(f"Bus {bus.busNumber:>4} {bus.Name:<20} "
+               f"V = {net.res_bus.at[idx, 'vm_pu']:.4f} pu   "
+               f"vinkel = {net.res_bus.at[idx, 'va_degree']:.3f} grader")
 
 
    def pandapower_FDLF(grid, omrade="NO3", kopi=True):
@@ -289,5 +314,9 @@ def validating_PP_FDPF(grid):
       if konvergerte:
          skriv_resultater(grid, net, bus_map, omrade)
       else:
-         print("Load flow did not converge.")     
+         print("Load flow did not converge.")
+      return grid
+
+   # kopi=False: resultatet skal skrives på grid.solution til objektet main.py har
+   return pandapower_FDLF(grid, kopi=False)
 #-----------validating pandapower fast decoupled load flow-----------------

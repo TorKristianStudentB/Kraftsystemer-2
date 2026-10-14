@@ -66,17 +66,6 @@ if __name__ == "__main__":
    kjøretid["PP_NR"] = grid.solution.kjoretid
    #---------Kjører lastflytanalyse med FDLF metode-
 
-   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
-   grid = MakeGrid(excelfilepath)
-   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
-
-   #---------Kjører lastflytanalyse med FDLF metode- 
-   grid.validating_PP_NR()
-   A_volt["PP_FD"] = grid.solution.volt
-   A_angle["PP_FD"] = grid.solution.angle
-   iterasjon["PP_FD"] = grid.solution.iterasjoner
-   kjøretid["PP_FD"] = grid.solution.kjoretid
-   #---------Kjører lastflytanalyse med FDLF metode-
 
    #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
    grid = MakeGrid(excelfilepath)
@@ -84,12 +73,26 @@ if __name__ == "__main__":
 
    
    #---------Kjører lastflytanalyse med FDLF metode- 
+
    grid.validating_PP_DC()
-   A_volt["PP_DF"] = grid.solution.volt
-   A_angle["PP_DF"] = grid.solution.angle
-   iterasjon["PP_DF"] = grid.solution.iterasjoner
-   kjøretid["PP_DF"] = grid.solution.kjoretid
+   A_volt["PP_DC"] = grid.solution.volt
+   A_angle["PP_DC"] = grid.solution.angle
+   iterasjon["PP_DC"] = grid.solution.iterasjoner
+   kjøretid["PP_DC"] = grid.solution.kjoretid
    #---------Kjører lastflytanalyse med FDLF metode-
+
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+   grid = MakeGrid(excelfilepath)
+   #---------Retarter gridet, så ikke neste solver får andre startbetingelser-------
+
+   #---------Kjører lastflytanalyse med FDLF metode- 
+   grid.validating_PP_FDPF()
+   A_volt["PP_FD"] = grid.solution.volt
+   A_angle["PP_FD"] = grid.solution.angle
+   iterasjon["PP_FD"] = grid.solution.iterasjoner
+   kjøretid["PP_FD"] = grid.solution.kjoretid
+   #---------Kjører lastflytanalyse med FDLF metode-
+
 
    #--------Printer resultatene i A--------------
    print(f"spenningen på alt er:\n{A_volt}")
