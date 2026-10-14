@@ -317,13 +317,21 @@ def N_minus_en_kriteriet(excelfilepath):
          lineDF = lineDF[~lineDF["line_id"].isin(fjernes_id)]   #leser på nytt hver gang, så PU-omregningen ikke gjøres to ganger
          grid = pakker_inn_her_så_jeg_kan_hente_for_N_minus_en(grid, busDF, lineDF, trafoDF, genDF, linkDF)
          try:
+            a=True
             grid.loadflowsolutionNR()
+            if grid.solution.konvergert==False:
+               a=False
             grid.FDLF()
+            if grid.solution.konvergert==False:
+               a=False
             grid.DCPF()
+            if grid.solution.konvergert==False:
+               a=False
+
          except Exception as e:
             print(f"N-1 kriteriet kom ikke i mål uten linje {fjernes_id}. Feilmelding {e}")
             return False
-         return True
+         return a
       #--------------------Leser excelarket på nytt, fjerner linjene og tester at lastflyten konvergerer----------
 
 
