@@ -190,7 +190,7 @@ def N_minus_en_kriteriet(excelfilepath):
    
       return serier 
    #---------------Finner serier med linjer man kan fjerne før det blir øy----------
-   Serier_av_linjer_som_kan_fjernes_før_det_blir_øy = Hvilke_serier_av_linje_uten_at_det_blir_oy(Par)
+   Serier_av_linjer_som_kan_fjernes_før_det_blir_øy = [] # Hvilke_serier_av_linje_uten_at_det_blir_oy(Par)
 
 
    #---------Leser excel arket og bruker pandas DF-------
@@ -452,19 +452,19 @@ def N_minus_en_kriteriet(excelfilepath):
          fjernet = []
 
          for linje_id in linjer_som_kan_fjernes_før_det_blir_øy:
-
+            
             #-------tester når vi fjerner kun en linje som gjør at vi ikke får øy----
             if not test_nett_uten_linjer([linje_id]):
                feilet_kun_en.append(linje_id)
             #-------tester når vi fjerner kun en linje som gjør at vi ikke får øy----
-
+            """
             #-------tester når vi fjerner en og en linje trappevis, uten å få øy----
             fjernet.append(linje_id)
             if not test_nett_uten_linjer(fjernet):
                feilet_trappevis.append(linje_id)
                break
             #-------tester når vi fjerner en og en linje trappevis, uten å få øy----
-
+            """
          return feilet_kun_en, feilet_trappevis
       #--------------------Denne kjører og fjerner linjer som ikke gir øyer i excelarket, en og en og trappevis----------
       feilet_kun_en, feilet_trappevis = N_minus_en_kriteriet_for_trappevis_fjerning_og_kun_enkelt_fjerning_linjer()
