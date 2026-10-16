@@ -342,8 +342,11 @@ def validating_PP_NR(grid):
             -float(result["p_mw"]) / SBASE_MVA
          )
 
+         shunt_indices = net.shunt.index[net.shunt["bus"] == pp_bus]
+         q_shunt_bus = net.res_shunt.loc[shunt_indices, "q_mvar"].sum()
+
          qower.append(
-            -float(result["q_mvar"]) / SBASE_MVA
+            (-float(result["q_mvar"]) + float(q_shunt_bus)) / SBASE_MVA
          )
 
 
