@@ -18,8 +18,8 @@ def test_no_gen_NR(grid_g, grid_h):
     h.loadflowsolutionNR()
 
 
-    assert g.solution.konvergerte == True
-    assert h.solution.konvergerte == True
+    assert g.solution.konvergerte == False
+    assert h.solution.konvergerte == False
 
 
 def test_no_gen_FDLF(grid_g,grid_h):
