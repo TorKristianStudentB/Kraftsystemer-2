@@ -257,12 +257,29 @@ def validating_PP_FDPF(grid):
       slack_nummer = next(b.busNumber for b, t in zip(grid.bus, bustyper) if t == "ref")
       mismatch = beregn_mismatch(grid, net, bus_map, bustyper, slack_nummer, sbase)
 
+      power = np.full(n, np.nan)
+      qower = np.full(n, np.nan)
+
+      gen, last, _ = hent_effekt_per_bus(net)
+
+      for k, bus in enumerate(grid.bus):
+         idx = bus_map[bus.busNumber]
+
+         if net.bus.at[idx, "in_service"]:
+            power[k] = -net.res_bus.at[idx, "p_mw"] / sbase
+            qower[k] = (
+               _verdi(gen, idx, "q_mvar")
+               - _verdi(last, idx, "q_mvar")
+            ) / sbase
+
       grid.solution = grid.__class__.Solution(
          volt=volt, 
          angle=angle, 
          flow_in_line=np.array([]),
          iterasjoner=iterasjoner, mismatch=mismatch, konvergerte=True,
-         pv_to_pq_generators=[], power=np.array([]), qower=np.array([]),
+                  pv_to_pq_generators=[],
+         power=power,
+         qower=qower,
          type=bustyper,
          kjoretid = time.perf_counter() - start_time,
       )

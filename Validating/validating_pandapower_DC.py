@@ -84,7 +84,7 @@ def validating_PP_DC(grid):
          konvergerte=0,
          flow_in_line=np.array(net.res_line["p_from_mw"]),
          pv_to_pq_generators=None,
-         power=None,
+         power=-net.res_bus["p_mw"].to_numpy() / grid.Base.Sbase,
          qower=None,
          type="PP_DC",
          kjoretid = time.perf_counter() - start_time,
