@@ -68,27 +68,78 @@ import tempfile
 import shutil
 
 def prepare_nordic_grid(source_path):
-    """Create a temporary copy with column names expected by MakeGrid."""
+    """Prepare a temporary workbook for the current GridMaker schema."""
     temp_dir = tempfile.mkdtemp(prefix="nordic_profile_")
     temp_path = Path(temp_dir) / "Nordic490_profile.xlsx"
-
     shutil.copy2(source_path, temp_path)
 
-    line_df = pd.read_excel(temp_path, sheet_name="line")
+    # Load all sheets so missing schema fields can be added to the copy.
+    sheets = pd.read_excel(temp_path, sheet_name=None)
 
+    # Rename line parameters to the names expected by ReadExcelGrid.py.
+    line_df = sheets["line"].copy()
     line_df.rename(columns={
         "R_per_meter": "R_per_m",
         "X_per_meter": "X_per_m",
         "B_per_meter": "B_per_m",
     }, inplace=True)
+    sheets["line"] = line_df
 
+    # S_max is required by the current GridMaker classes.
+    # Use a large placeholder only when the workbook has no rating.
+    default_smax = 1e12
+
+    for sheet_name in ("bus", "line", "trafo"):
+        df = sheets[sheet_name].copy()
+
+        # Recognize common alternative column names.
+        aliases = {
+            str(column).strip().lower(): column
+            for column in df.columns
+        }
+        smax_column = next(
+            (
+                aliases[name]
+                for name in (
+                    "s_max",
+                    "smax",
+                    "s_max [mva]",
+                    "smax [mva]",
+                    "s max",
+                    "s max [mva]",
+                )
+                if name in aliases
+            ),
+            None,
+        )
+
+        if smax_column is not None and smax_column != "S_max":
+            df.rename(columns={smax_column: "S_max"}, inplace=True)
+
+        if "S_max" not in df.columns:
+            df["S_max"] = default_smax
+            print(
+                f"Warning: {sheet_name} sheet has no S_max rating; "
+                f"using placeholder {default_smax:g} in temporary copy."
+            )
+        else:
+            df["S_max"] = pd.to_numeric(
+                df["S_max"], errors="coerce"
+            ).fillna(default_smax)
+
+        sheets[sheet_name] = df
+
+    # Replace only the three sheets adapted above.
     with pd.ExcelWriter(
         temp_path,
         engine="openpyxl",
         mode="a",
-        if_sheet_exists="replace"
+        if_sheet_exists="replace",
     ) as writer:
-        line_df.to_excel(writer, sheet_name="line", index=False)
+        for sheet_name in ("bus", "line", "trafo"):
+            sheets[sheet_name].to_excel(
+                writer, sheet_name=sheet_name, index=False
+            )
 
     return temp_path
 
