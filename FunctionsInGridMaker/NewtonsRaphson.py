@@ -458,8 +458,9 @@ def NewtonRaphson(grid):
          
          
         #------------------Må legge til første element, anvender at summen av effekt er null--------  
-        power.insert(0, -1*sum(np.array(power)))
-        qower.insert(0, -1*sum(np.array(qower)))
+        power.insert(0, sum(powerflowequationP(0, j) for j in range(len(grid.bus))))
+        qower.insert(0, sum(powerflowequationQ(0, j) for j in range(len(grid.bus))))
+
         #------------------Må legge til første element, anvender at summen av effekt er null--------                 
 
         return solution,i, deltaPQ, flow_in_line(), pv_to_pq_generators, power, qower, flagg
