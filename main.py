@@ -54,6 +54,11 @@ if __name__ == "__main__":
    print(f"vinkel: \n {A_angle}")
 
 
+
+
+
+
+
    #solvere = {"Newton-Raphson": "loadflowsolutionNR", "DC": "DCPF", "Fast decoupled": "FDLF", "PP Newton-Raphson": "validating_PP_NR", "PP DC": "validating_PP_DC", "PP Fast decoupled": "validating_PP_FDPF"}
    metode="Newton Raphson"
 
