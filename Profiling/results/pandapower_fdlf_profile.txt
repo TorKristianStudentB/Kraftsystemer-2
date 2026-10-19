@@ -1,0 +1,33 @@
+         17038774 function calls (16709330 primitive calls) in 12.250 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1375 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   12.250   12.250 c:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Profiling\profile_loadflow.py:155(<lambda>)
+        1    0.000    0.000   12.250   12.250 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\GridMaker\ClassGrid.py:29(validating_PP_FDPF)
+        1    0.001    0.001   12.250   12.250 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:9(validating_PP_FDPF)
+        1    0.000    0.000   12.249   12.249 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:307(pandapower_FDLF)
+        1    0.000    0.000   12.126   12.126 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:139(bygg_pandapower_nett)
+     3004    0.083    0.000   10.992    0.004 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\_utils.py:318(_set_entries)
+        1    0.007    0.007    7.527    7.527 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:47(_lag_linjer)
+     1200    0.010    0.000    5.159    0.004 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\shunt_create.py:29(create_shunt)
+     3004    0.136    0.000    5.129    0.002 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\auxiliary.py:664(_preserve_dtypes)
+    32491    0.115    0.000    3.258    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:2578(__setitem__)
+    37235    0.078    0.000    3.073    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\generic.py:6454(dtypes)
+    33144    0.121    0.000    3.026    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:2530(__setitem__)
+42127/41979    0.389    0.000    2.902    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\series.py:392(__init__)
+    32491    0.084    0.000    2.802    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\frame.py:4551(_set_value)
+    22198    0.089    0.000    2.675    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\frame.py:4073(__getitem__)
+      600    0.003    0.000    2.361    0.004 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\impedance_create.py:29(create_impedance)
+     3008    0.026    0.000    2.183    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:883(__setitem__)
+     3008    0.063    0.000    2.004    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:1786(_setitem_with_indexer)
+     6028    0.027    0.000    1.666    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\internals\managers.py:642(reindex_indexer)
+        1    0.002    0.002    1.461    1.461 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:107(_lag_slack_og_generatorer)
+      288    0.003    0.000    1.455    0.005 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\gen_create.py:30(create_gen)
+        1    0.002    0.002    1.311    1.311 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:86(_lag_laster)
+      359    0.003    0.000    1.309    0.004 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\load_create.py:31(create_load)
+13985/13334    0.048    0.000    1.221    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\generic.py:6485(astype)
+        1    0.001    0.001    1.200    1.200 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_FDPF.py:40(_lag_busser)
+
+

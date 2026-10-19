@@ -1,0 +1,33 @@
+         39314599 function calls in 40.466 seconds
+
+   Ordered by: cumulative time
+   List reduced from 87 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   40.466   40.466 c:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Profiling\profile_loadflow.py:153(<lambda>)
+        1    0.001    0.001   40.466   40.466 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\GridMaker\ClassGrid.py:22(FDLF)
+        1    0.000    0.000   40.466   40.466 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:4(FDLF)
+        1    2.406    2.406   37.630   37.630 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:142(finalsolver)
+  5000000   16.262    0.000   24.231    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:118(flyt_Q)
+  2750000    8.961    0.000   13.340    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:106(flyt_P)
+  7750000    9.134    0.000   11.574    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\numpy\lib\_function_base_impl.py:1649(angle)
+     1000    0.104    0.000    2.667    0.003 {built-in method builtins.sum}
+  7750499    1.875    0.000    1.875    0.000 {built-in method numpy.asanyarray}
+        1    0.001    0.001    1.341    1.341 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:306(<listcomp>)
+        1    0.001    0.001    1.328    1.328 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:307(<listcomp>)
+   250500    0.090    0.000    1.288    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:306(<genexpr>)
+   250500    0.088    0.000    1.275    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:307(<genexpr>)
+  7750000    0.774    0.000    0.774    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\numpy\lib\_function_base_impl.py:1645(_angle_dispatcher)
+  7750102    0.565    0.000    0.565    0.000 {built-in method builtins.issubclass}
+     3824    0.001    0.000    0.080    0.000 {built-in method builtins.next}
+        1    0.058    0.058    0.058    0.058 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:19(finn_gen_indekser)
+       18    0.034    0.002    0.035    0.002 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\numpy\linalg\_linalg.py:320(solve)
+        1    0.001    0.001    0.032    0.032 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:67(bygg_grener)
+        1    0.004    0.004    0.031    0.031 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:267(flow_in_line)
+        1    0.000    0.000    0.027    0.027 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\FDLF.py:6(oppstart)
+        1    0.000    0.000    0.027    0.027 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\GridMaker\ClassGrid.py:13(admittansmatrise)
+        1    0.003    0.003    0.027    0.027 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\admittansmatrise.py:4(cutsem)
+     1312    0.001    0.000    0.024    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\admittansmatrise.py:11(konverter_identifikasjonummer)
+     2624    0.023    0.000    0.023    0.000 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\FunctionsInGridMaker\admittansmatrise.py:12(<genexpr>)
+
+

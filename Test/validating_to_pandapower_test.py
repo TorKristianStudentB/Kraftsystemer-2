@@ -7,10 +7,10 @@ def test_validating_answers_error_againts_pandapower_NR(grid_g):
 
    grid = grid_g
 
-   A_volt = pd.DataFrame(columns=["NR"])
-   A_angle = pd.DataFrame(columns=["NR"])
-   A_power = pd.DataFrame(columns=["NR"])
-   A_qower = pd.DataFrame(columns=["NR"])
+   A_volt = pd.DataFrame(columns=["NR","PP_NR"])
+   A_angle = pd.DataFrame(columns=["NR","PP_NR"])
+   A_power = pd.DataFrame(columns=["NR","PP_NR"])
+   A_qower = pd.DataFrame(columns=["NR","PP_NR"])
 
    #-------Opretter en A matrise til sammenlignign av resultater-----
    iterasjon = {}
@@ -35,7 +35,7 @@ def test_validating_answers_error_againts_pandapower_NR(grid_g):
    A_qower["PP_NR"] = grid.solution.qower
    #---------Kjører lastflytanalyse med FDLF metode-
 
-   assert np.allclose(A_volt["PP_NR"], A_volt["NR"], atol=1e-3)
+   assert np.allclose(A_volt["PP_NR"], A_volt["NR"], atol=1e-36)
    assert np.allclose(A_angle["PP_NR"], A_angle["NR"], atol=1e-3)
    assert np.allclose(A_power["PP_NR"], A_power["NR"], atol=1e-3)
    assert np.allclose(A_qower["PP_NR"], A_qower["NR"], atol=1e-3)

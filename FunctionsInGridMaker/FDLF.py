@@ -153,26 +153,25 @@ def FDLF(grid):
          # Formel (mismatch/"feilen" i effekt, for hver buss i):
          #   ΔP_i = P_i^planlagt − Σ_j P_ij
          #   ΔQ_i = Q_i^planlagt − Σ_j Q_ij
-         feil_P = []
-         feil_Q = []
+         delta_P = []
+         delta_Q = []
          for i in range(antall_busser):
             P_beregnet = 0
             Q_beregnet = 0
             for j in range(antall_busser):
                   P_beregnet = P_beregnet + flyt_P(i, j, Y)
-                  Q_beregnet = Q_beregnet + flyt_Q(i, j, Y)
-            feil_P.append(P_planlagt[i] - P_beregnet)
-            feil_Q.append(Q_planlagt[i] - Q_beregnet)
+            delta_P.append(P_planlagt[i] - P_beregnet)
+
+         if iterasjon >= max_iter:
+            ferdig = True
+            break
 
          # Formel (konvergenskriterium):
          #   maks( |ΔP_i| for i i buss_B_m,  |ΔQ_i| for i i buss_B_mm )  ≤  tol  ?
          storste_feil = 0
          for i in buss_B_m:
-            if abs(feil_P[i]) > storste_feil:
-                  storste_feil = abs(feil_P[i])
-         for i in buss_B_mm:
-            if abs(feil_Q[i]) > storste_feil:
-                  storste_feil = abs(feil_Q[i])
+            if abs(delta_P[i]) > storste_feil:
+                  storste_feil = abs(delta_P[i])
 
          if storste_feil <= tol:
             konvergerte = True
@@ -189,7 +188,7 @@ def FDLF(grid):
          if len(buss_B_m) > 0:
             hoyreside = []
             for i in buss_B_m:
-                  hoyreside.append(feil_P[i] / grid.bus[i].Volt)
+                  hoyreside.append(delta_P[i] / grid.bus[i].Volt)
             hoyreside = np.array(hoyreside)
 
 
@@ -215,7 +214,7 @@ def FDLF(grid):
                 ferdig = True
                 break
             #----------sjekker om den divigerer, og gir ikke konvererer----------
-
+            
 
             for idx, i in enumerate(buss_B_m):
                   grid.bus[i].Angle = grid.bus[i].Angle + delta_vinkel[idx]
@@ -225,17 +224,22 @@ def FDLF(grid):
          #   B'' · ΔV = ΔQ / V       (elementvis: for hver buss i i buss_B_mm)
          #   V_i(ny) = V_i(gammel) + ΔV_i
          if len(buss_B_mm) > 0:
-            feil_Q = []
+            delta_Q = []
             for i in range(antall_busser):
                   Q_beregnet = 0
                   for j in range(antall_busser):
                      Q_beregnet = Q_beregnet + flyt_Q(i, j, Y)
-                  feil_Q.append(Q_planlagt[i] - Q_beregnet)
+                  delta_Q.append(Q_planlagt[i] - Q_beregnet)
 
             hoyreside = []
             for i in buss_B_mm:
-                  hoyreside.append(feil_Q[i] / grid.bus[i].Volt)
+                  hoyreside.append(delta_Q[i] / grid.bus[i].Volt)
             hoyreside = np.array(hoyreside)
+
+            for i in buss_B_mm:
+               if abs(delta_Q[i]) > storste_feil:
+                  storste_feil = abs(delta_Q[i])
+
 
             #----------sjekker om den divigerer, og gir ikke konvererer----------
             try:
@@ -258,9 +262,9 @@ def FDLF(grid):
 
          iterasjon = iterasjon + 1
 
-      return solution, iterasjon,feil_P,feil_Q
+      return solution, iterasjon,delta_P,delta_Q
    #------------den endelige løkken som løser alt-------------------------
-   konvergerte, iterasjon, feil_P,feil_Q=finalsolver(Y,N)
+   konvergerte, iterasjon, delta_P,delta_Q=finalsolver(Y,N)
 
 
    #--------------Regner ut effektflyten på linjene-----------------
@@ -299,7 +303,7 @@ def FDLF(grid):
          volt        = np.array([b.Volt for b in grid.bus]),
          angle       = np.array([b.Angle for b in grid.bus]),
          iterasjoner = int(iterasjon),
-         mismatch    = [feil_P,feil_Q],
+         mismatch    = [delta_P,delta_Q],
          konvergerte = konvergerte,
          flow_in_line = flow_in_line(),
          pv_to_pq_generators = None,

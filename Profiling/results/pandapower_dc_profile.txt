@@ -1,0 +1,33 @@
+         895447 function calls (880341 primitive calls) in 0.590 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1029 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.590    0.590 c:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Profiling\profile_loadflow.py:154(<lambda>)
+        1    0.001    0.001    0.590    0.590 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\GridMaker\ClassGrid.py:25(validating_PP_DC)
+        1    0.000    0.000    0.589    0.589 C:\Users\Eier\OneDrive\Master\Kraftsystemer\Kraftsystemer-2\Validating\validating_pandapower_DC.py:5(validating_PP_DC)
+        1    0.000    0.000    0.271    0.271 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\network_create.py:18(create_empty_network)
+       77    0.002    0.000    0.263    0.003 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\_utils.py:318(_set_entries)
+        1    0.001    0.001    0.259    0.259 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\auxiliary.py:480(create_dataframes)
+ 1037/386    0.006    0.000    0.199    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\generic.py:6485(astype)
+       77    0.003    0.000    0.119    0.002 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\auxiliary.py:664(_preserve_dtypes)
+1468/1321    0.013    0.000    0.103    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\series.py:392(__init__)
+      222    0.002    0.000    0.099    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\frame.py:698(__init__)
+     1515    0.005    0.000    0.095    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:2530(__setitem__)
+      147    0.003    0.000    0.091    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\internals\construction.py:423(dict_to_mgr)
+       18    0.000    0.000    0.083    0.005 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\line_create.py:536(create_line_from_parameters)
+      864    0.003    0.000    0.081    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:2578(__setitem__)
+      993    0.002    0.000    0.080    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\generic.py:6454(dtypes)
+       17    0.000    0.000    0.078    0.005 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\sgen_create.py:32(create_sgen)
+     1922    0.008    0.000    0.075    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\internals\managers.py:317(apply)
+      864    0.002    0.000    0.069    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\frame.py:4551(_set_value)
+     3201    0.013    0.000    0.069    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\dtypes\common.py:1606(pandas_dtype)
+      638    0.002    0.000    0.068    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\frame.py:4073(__getitem__)
+      968    0.002    0.000    0.061    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\internals\managers.py:440(astype)
+       97    0.001    0.000    0.058    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:883(__setitem__)
+       16    0.000    0.000    0.055    0.003 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandapower\create\load_create.py:31(create_load)
+    98/97    0.002    0.000    0.052    0.001 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\indexing.py:1786(_setitem_with_indexer)
+      968    0.002    0.000    0.052    0.000 C:\Users\Eier\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\internals\blocks.py:749(astype)
+
+
