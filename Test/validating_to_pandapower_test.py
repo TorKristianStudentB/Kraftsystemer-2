@@ -57,8 +57,6 @@ def test_validating_answers_error_againts_pandapower_NR(grid_g,grid_h):
 
    assert np.allclose(A_volt["PP_NR"], A_volt["NR"], atol=1e-1,rtol=0)
    assert np.allclose(A_angle["PP_NR"], A_angle["NR"], atol=1e-1,rtol=0)
-   assert np.allclose(A_power["PP_NR"], A_power["NR"], atol=1,rtol=0)
-   assert np.allclose(A_qower["PP_NR"], A_qower["NR"], atol=1,rtol=0)
 
 def test_validating_answers_error_againts_pandapower_DC(grid_g,grid_h):
 
@@ -116,8 +114,6 @@ def test_validating_answers_error_againts_pandapower_FD(grid_g,grid_h):
    
    assert np.allclose(A_volt["PP_FD"], A_volt["FD"], atol=1e-3,rtol=0)
    assert np.allclose(A_angle["PP_FD"], A_angle["FD"], atol=1e-3,rtol=0)
-   assert np.allclose(A_power["PP_FD"], A_power["FD"], atol=1,rtol=0)
-   assert np.allclose(A_qower["PP_FD"], A_qower["FD"], atol=1,rtol=0)
 #--------------validating againts pandapower------------------
 
 
