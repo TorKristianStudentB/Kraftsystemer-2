@@ -54,6 +54,8 @@ if __name__ == "__main__":
 
 
    #solvere = {"Newton-Raphson": "loadflowsolutionNR", "DC": "DCPF", "Fast decoupled": "FDLF", "PP Newton-Raphson": "validating_PP_NR", "PP DC": "validating_PP_DC", "PP Fast decoupled": "validating_PP_FDPF"}
+   metode="Newton Raphson"
+   print(f"Dette er kort om resultater med {metode} og N-1 resultatene om nettet\n")
    grid.resultater("Newton Raphson")
 
    
