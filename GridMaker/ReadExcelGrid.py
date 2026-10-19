@@ -162,6 +162,7 @@ def MakeGrid(ExcelSheet):
                kodens_identifikasjonssystem = i,
                cords = [float(busDF["lat"].iloc[i]),float(busDF["lon"].iloc[i])] if cordinater else None,
                place = [float(busDF["x"].iloc[i]),float(busDF["y"].iloc[i])] if plassering else None,
+               S_max = float(busDF["S_max"].iloc[i])
             )
             grid.bus.append(b)
 
@@ -182,6 +183,7 @@ def MakeGrid(ExcelSheet):
                Tobus      = int(lineDF["bus1"].iloc[i]),
                lenght     = float(lineDF["length"].iloc[i]),
                eic_code = str(lineDF["eic code"].iloc[i]) if eic_code_line else None,
+               S_max = float(lineDF["S_max"].iloc[i]),
             )
             grid.line.append(b)
          #--------------oppretter linjer fra excel arket----------
@@ -197,6 +199,7 @@ def MakeGrid(ExcelSheet):
                R       = float(trafoDF["R"].iloc[i]),
                X       = float(trafoDF["X"].iloc[i]),
                eic_code = str(trafoDF["eic code"].iloc[i]) if eic_code_trafo else None,
+               S_max = float(trafoDF["S_max"].iloc[i]),
             )
             grid.trafo.append(tr)
          #--------------oppretter Trafoer fra excel arket----------
@@ -205,7 +208,7 @@ def MakeGrid(ExcelSheet):
          #--------------oppretter generator data fra excel arket---
          for i in range(len(genDF)):
                b = Grid.gen(
-                  P_max     = int(genDF["Pmax"].iloc[i]),
+                  P_max     = float(genDF["Pmax"].iloc[i]),   #float, ellers kuttes desimalene i pu-verdien
                   name      = str(genDF["name"].iloc[i]),
                   bus       = float(genDF["bus"].iloc[i]),
                   Q_max = float(genDF["Qmax"].iloc[i]) if Q_max else None,

@@ -1,4 +1,4 @@
-from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow, FDLF
+from GridMaker.Imports import theveninZth, cutsem, NewtonRaphson, dc_power_flow,excelfilepath, FDLF,resultater_fremvisning
 
 
 #----------Making grid class---------------
@@ -33,6 +33,45 @@ class Grid:
    def validating_PP_NR(self):
           from Validating.validating_pandapower_NR_bussklassifisering import validating_PP_NR   # lat import (se over)
           return validating_PP_NR(self) 
+
+   def N_minus_en(self):
+       from FunctionsInGridMaker.N_minus_en import N_minus_en_kriteriet   # lat import (se over)
+       return N_minus_en_kriteriet(excelfilepath)
+
+   def resultater(self,metode):
+       return resultater_fremvisning(self,metode,excelfilepath)
+
+   def sjekke__bus_over_P_gen_max(self):
+
+      for bus in self.bus:
+         P_max_sum = 0
+
+         #---summerer alle maks effekt fra alle generatorene----
+         for gen in self.gen:
+               if gen.bus == bus.busNumber:
+                  P_max_sum += gen.P_max
+
+         if bus.P_gen > P_max_sum:
+               return True
+
+      return False
+                                    
+   def sjekke_over_Q_gen_max(self):
+   
+            for bus in self.bus:
+               Q_max_sum = 0
+   
+               #---summerer alle maks effekt fra alle generatorene----
+               for gen in self.gen:
+                     if gen.bus == bus.busNumber:
+                        Q_max_sum += gen.Q_max
+   
+               if bus.Q_gen > Q_max_sum:
+                     return True
+   
+            return False
+
+
    #-----------------Her legges funksjonene inn, og husk å legge dem i imports-----------
 
    def __init__(self,Name):
@@ -83,7 +122,7 @@ class Grid:
       Bidz : str
       Vbase : float 
 
-      def __init__(self, busNumber,name,Volt,Angle,P_gen,Q_gen,P_load,Q_load,bidz,Vbase,V_max,V_min,eic_code,kodens_identifikasjonssystem, cords, place):
+      def __init__(self, busNumber,name,Volt,Angle,P_gen,Q_gen,P_load,Q_load,bidz,Vbase,V_max,V_min,eic_code,kodens_identifikasjonssystem, cords, place,S_max):
         self.busNumber = busNumber
         self.Name = name
         self.Volt = Volt
@@ -100,6 +139,7 @@ class Grid:
         self.kodens_identifikasjonssystem = kodens_identifikasjonssystem
         self.cords = cords
         self.place = place
+        self.S_max = S_max
 
 
       def finne_bus_indeks(self, busNumber):
@@ -107,11 +147,6 @@ class Grid:
                if bus.busNumber == busNumber:
                      return bus.kodens_identifikasjonssystem
             return None
-                           
-
-
-#----------bus end------------------------
-
 
 #----------lines start----------------------
    class line:   
@@ -123,7 +158,7 @@ class Grid:
       Tobus:int
       lenght:float
 
-      def __init__(self,Vbase,lineNumber,Name,R,X,B,Frombus,Tobus,lenght,eic_code):
+      def __init__(self,Vbase,lineNumber,Name,R,X,B,Frombus,Tobus,lenght,eic_code,S_max):
             self.Vbase = Vbase
             self.lineNumber = lineNumber
             self.Name = Name
@@ -134,6 +169,7 @@ class Grid:
             self.Tobus = Tobus
             self.lenght = lenght
             self.eic_code = eic_code
+            self.S_max = S_max
 
       def admittans(self):
          return 1/complex(self.R, self.X)
@@ -153,7 +189,7 @@ class Grid:
       R:float
       X:float
 
-      def __init__(self, name, type, ratio, Frombus, Tobus, R, X, eic_code):
+      def __init__(self, name, type, ratio, Frombus, Tobus, R, X, eic_code,S_max):
          self.Name = name
          self.Type = type
          self.ratio = ratio
@@ -162,6 +198,7 @@ class Grid:
          self.R = R
          self.X = X
          self.eic_code = eic_code
+         self.S_max = S_max
 
       def admittans(self):
             return 1/complex(self.R, self.X)

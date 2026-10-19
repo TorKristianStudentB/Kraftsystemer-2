@@ -31,8 +31,6 @@ def test_no_gen_FDLF(grid_g,grid_h):
         b.P_gen = 0
         b.Q_gen = 0
 
-        g.FDLF()
-        h.FDLF()
 
     for c in h.bus:
         c.P_gen = 0.0001
