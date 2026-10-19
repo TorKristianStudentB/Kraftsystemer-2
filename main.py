@@ -7,6 +7,7 @@ if __name__ == "__main__":
    grid = MakeGrid(excelfilepath)
    #---------lager nettet til klassen grid fra excelarket-------
 
+   print("Dette er overordnet spenning og vinkel mellom alle 6 metodene:")
    A_volt = pd.DataFrame(columns=["NR", "DC", "FD", "PP_NR", "PP_DC", "PP_FD"])
    A_angle = pd.DataFrame(columns=["NR", "DC", "FD", "PP_NR", "PP_DC", "PP_FD"])
 
@@ -55,7 +56,8 @@ if __name__ == "__main__":
 
    #solvere = {"Newton-Raphson": "loadflowsolutionNR", "DC": "DCPF", "Fast decoupled": "FDLF", "PP Newton-Raphson": "validating_PP_NR", "PP DC": "validating_PP_DC", "PP Fast decoupled": "validating_PP_FDPF"}
    metode="Newton Raphson"
-   print(f"Dette er kort om resultater med {metode} og N-1 resultatene om nettet\n")
+
+   print(f"\nDette er kort om resultater med {metode} og N-1 resultatene om nettet\n")
    grid.resultater("Newton Raphson")
 
    
