@@ -19,11 +19,10 @@ def test_no_load_NR(grid_g,grid_h):
     g.loadflowsolutionNR()
     h.loadflowsolutionNR()
 
-    print(g.solution.volt)
-    print(h.solution.volt)
 
-    assert g.solution.konvergerte == False
-    assert h.solution.konvergerte == False
+    assert g.solution.konvergerte == True
+    assert h.solution.konvergerte == True
+    assert g.solution.angle == pyt.approx(h.solution.angle,abs=1e-3)
 
 def test_no_load_FD(grid_g,grid_h):
 

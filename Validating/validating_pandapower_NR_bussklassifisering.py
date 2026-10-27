@@ -1,15 +1,4 @@
-
-
-#Denne koden klassifiserer en buss som PV om det er en generatoren er tilkoblet, selv om generatoren er av eller har null i verdier.
-
-import sys
-from pathlib import Path
-import time
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from GridMaker.Imports import pd,np,pp
+from GridMaker.Imports import np,pp,time
 from GridMaker.ReadExcelGrid import MakeGrid   # direkte import for å unngå sirkulær import
 
 

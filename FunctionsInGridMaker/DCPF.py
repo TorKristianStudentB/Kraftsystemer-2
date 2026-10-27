@@ -202,7 +202,7 @@ def dc_power_flow(grid):
    else:
       #---------------Loader løsningen som et eget object under hovednettet-----------
       grid.solution = grid.__class__.Solution(
-            volt        = np.array([b.Volt for b in grid.bus]),
+            volt        = np.ones(len(grid.bus)),
             angle       = np.array([b.Angle for b in grid.bus]),
             iterasjoner = 1,
             mismatch    = mismatch,

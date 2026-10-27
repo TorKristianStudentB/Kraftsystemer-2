@@ -116,7 +116,6 @@ def validating_PP_FDPF(grid):
                   net, bus=idx, vm_pu=bus.Volt,
                   va_degree=np.degrees(bus.Angle), name="Slack bus",
                )
-               print("Slack bus:", bus.busNumber, f"({bus.Name})")
 
          elif typ == "PV":
                kwargs = dict(
@@ -132,8 +131,6 @@ def validating_PP_FDPF(grid):
 
       if len(net.ext_grid) == 0:
          raise ValueError("Fant ingen slack-buss (bus_type 'ref').")
-      if antall_pv == 0:
-         print("ADVARSEL: ingen PV-busser (ingen generatorer i grid.gen).")
 
 
    def bygg_pandapower_nett(grid, bustyper):
@@ -154,22 +151,11 @@ def validating_PP_FDPF(grid):
       uforsynte = sorted(top.unsupplied_buses(net))
       if uforsynte:
          net.bus.loc[uforsynte, "in_service"] = False
-      print("\nBuses disabled as unsupplied (not connected to slack):", uforsynte)
-      print("Active bus count:", int(net.bus["in_service"].sum()))
       return uforsynte
 
 
    def kjor_fdlf(net):
-      try:
-         pp.runpp(
-               net, algorithm="fdxb", calculate_voltage_angles=True,
-               init="flat", max_iteration=50, tolerance_mva=1e-6,
-         )
-      except Exception as e:
-         print("\nLoad flow failed:")
-         print(type(e).__name__, e)
-         raise
-      print("\nSolver converged:", net.converged)
+      pp.runpp(net, algorithm="fdxb", calculate_voltage_angles=True,init="flat", max_iteration=50, tolerance_mva=1e-6,)
       return bool(net.converged)
 
 
@@ -284,12 +270,12 @@ def validating_PP_FDPF(grid):
          kjoretid = time.perf_counter() - start_time,
       )
 
-
+   """
    def skriv_nettoppsummering(net, sbase):
       print(f"\nPandapower-nett: {len(net.bus)} busser, {len(net.impedance)} linjer, "
             f"{len(net.trafo)} trafoer, {len(net.load)} laster, {len(net.gen)} generatorer, "
             f"{len(net.shunt)} shunter, Sbase = {sbase} MVA")
-
+   """
 
    def skriv_resultater(grid, net, bus_map, omrade):
       """Skriver spenning og vinkel for busser i budområdet (eller alle hvis omrade er None)."""
@@ -299,9 +285,7 @@ def validating_PP_FDPF(grid):
          idx = bus_map[bus.busNumber]
          if not net.bus.at[idx, "in_service"]:
             continue
-         print(f"Bus {bus.busNumber:>4} {bus.Name:<20} "
-               f"V = {net.res_bus.at[idx, 'vm_pu']:.4f} pu   "
-               f"vinkel = {net.res_bus.at[idx, 'va_degree']:.3f} grader")
+
 
 
    def pandapower_FDLF(grid, omrade="NO3", kopi=True):
@@ -322,16 +306,12 @@ def validating_PP_FDPF(grid):
       bustyper = hent_bustyper(grid)
 
       net, bus_map = bygg_pandapower_nett(grid, bustyper)
-      skriv_nettoppsummering(net, sbase)
+      #skriv_nettoppsummering(net, sbase)
       koble_ut_forsynte_busser(net)
 
       konvergerte = kjor_fdlf(net)
       lagre_i_grid(grid, net, bus_map, bustyper, konvergerte, sbase)
 
-      if konvergerte:
-         skriv_resultater(grid, net, bus_map, omrade)
-      else:
-         print("Load flow did not converge.")
       return grid
 
    # kopi=False: resultatet skal skrives på grid.solution til objektet main.py har
