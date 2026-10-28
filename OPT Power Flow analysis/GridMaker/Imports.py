@@ -3,7 +3,8 @@ from pathlib import Path
 import os
 import pandas as pd
 NameExcelFile="test_trøndelagsnettet.xlsx"
-excelfilepath = (Path(os.getcwd())) / "Grid" / NameExcelFile
+print()
+excelfilepath = (Path(os.getcwd())) / "OPT Power Flow analysis" / "Grid" / NameExcelFile
 df = pd.read_excel(excelfilepath,sheet_name=None)
 #------------nettet som brukes fra excelarket---------------
 
