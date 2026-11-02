@@ -2,7 +2,7 @@
 from pathlib import Path
 import os
 import pandas as pd
-NameExcelFile="test_trøndelagsnettet.xlsx"
+NameExcelFile="test_trøndelagsnettet_feasible.xlsx"
 print()
 excelfilepath = (Path(os.getcwd())) / "OPT Power Flow analysis" / "Grid" / NameExcelFile
 df = pd.read_excel(excelfilepath,sheet_name=None)
