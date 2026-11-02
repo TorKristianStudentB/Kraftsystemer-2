@@ -1,4 +1,11 @@
+from pathlib import Path
+import os
+
+# Del A-innlesingen forventer at arbeidsmappen er roten til repoet.
+os.chdir(Path(__file__).resolve().parent.parent)
+
 from GridMaker.Imports import MakeGrid, Path, pd,np,df,metode
+from SCOPF.dc_scopf import dc_scopf, vis_resultater_SCOPF
 
 #----------Main Running---------------
 if __name__ == "__main__":
@@ -9,6 +16,15 @@ if __name__ == "__main__":
 
    #---------lager nettet til klassen grid fra excelarket-------
    grid = MakeGrid(df1)
+
+   # SCOPF returnerer et Grid-objekt, som gruppens dcopf().
+   # kopi=True bevarer grid til lastflytsammenligningen nedenfor.
+   grid_scopf = dc_scopf(grid, kopi=True)
+
+   vis_resultater_SCOPF(grid_scopf)
+
+   # Vanlig DC-OPF kjøres med gruppens dcopf() når filen er lagt inn.
+
    #---------lager nettet til klassen grid fra excelarket-------
 
 
