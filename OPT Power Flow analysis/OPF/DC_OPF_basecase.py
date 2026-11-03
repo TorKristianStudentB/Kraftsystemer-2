@@ -1,3 +1,23 @@
+# Gjør prosjektroten tilgjengelig når denne filen kjøres direkte fra OPF-undermappen.
+from pathlib import Path
+import sys
+from ContingencyAnalysis import contingency_analysis
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = next(
+    (folder for folder in (_SCRIPT_DIR, *_SCRIPT_DIR.parents)
+     if (folder / "GridMaker").is_dir()),
+    None,
+)
+if _PROJECT_ROOT is None:
+    raise ModuleNotFoundError(
+        f"Fant ikke mappen 'GridMaker' i noen foreldremappe til {_SCRIPT_DIR}. "
+        "Kontroller at DC_OPF_basecase.py ligger under prosjektroten, og at "
+        "GridMaker-mappen finnes der."
+    )
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from GridMaker.Imports import np, pd, time
 import copy
 import pyomo.environ as pyo
@@ -8,13 +28,14 @@ import pyomo.environ as pyo
 #   s.t.  P_g(bus i) - (flyt ut - flyt inn) = P_load,i     for alle busser i   (dual = LMP)
 #         -Fmax_l <= b_l * (theta_fra - theta_til) <= Fmax_l   for alle grener l   (dual = skyggepris)
 #         0 <= P_g <= P_max,g
-#         theta_ref = 0 (grid.bus[0])
+#         theta_ref = grid.bus[ref_idx].Angle, der ref_bus=30 som standard
 # Kostnadene leses fra gen.cost_per_MW (satt av MakeGrid fra gen-arket i Excel).
 # P_gen i bussarket/gen-arket brukes IKKE, produksjonen er variabel.
-def dcopf(grid, solver="appsi_highs", kopi=False):
+def dcopf(grid, solver="appsi_highs", kopi=False, ref_bus=30):
    """
    Løser DC-OPF uten N-1 på et Grid-objekt.
 
+   ref_bus    : eksplisitt referansebuss oppgitt med busNumber (standard: 30, Vågåmo).
    kopi=False : dispatch og vinkler skrives tilbake på grid (bus.P_gen, bus.Angle, gen.P_opf),
                 slik at grid.DCPF() og kontingensanalysen kan bruke OPF-punktet direkte.
    kopi=True  : jobber på en deepcopy, originalgridet er urørt. Resultatet ligger på den returnerte kopien.
@@ -75,9 +96,39 @@ def dcopf(grid, solver="appsi_highs", kopi=False):
       return [i for i in range(N) if i not in tilkoblet]
    #---------finner busser som ikke henger sammen med noe--------------
    busser_alene = finn_busser_alene()
-   if 0 in busser_alene:
-      raise ValueError("Referansebussen (grid.bus[0]) er ikke koblet til nettet")
    gen_buss = [indices[int(gen.bus)] for gen in grid.gen]   # gen.bus er float i grid-objektet
+
+   #---------kontrollerer isolerte busser før de eventuelt utelates fra modellen---------
+   def kontroller_isolerte_busser():
+      problemer = []
+      toleranse = 1e-9  # P_load er i pu
+      for i in busser_alene:
+         bus = grid.bus[i]
+         generatorer = [grid.gen[g].name for g, bi in enumerate(gen_buss) if bi == i]
+         last = float(bus.P_load)
+         if abs(last) > toleranse or generatorer:
+            problemer.append(
+               f"buss {bus.busNumber}: P_load={last:.6g} pu, generatorer={generatorer}"
+            )
+      if problemer:
+         detaljer = "\n  - ".join(problemer)
+         raise ValueError(
+            "DC-OPF kan ikke utelate isolerte busser som har aktiv last eller generatorer. "
+            "Kontroller nettverksdataene/tilkoblingene:\n  - " + detaljer
+         )
+   #---------kontrollerer isolerte busser---------
+   kontroller_isolerte_busser()
+
+   #---------velger og validerer referansebuss eksplisitt---------
+   if ref_bus not in indices:
+      raise ValueError(
+         f"Referansebuss {ref_bus} finnes ikke i nettet. "
+         f"Tilgjengelige busser: {[bus.busNumber for bus in grid.bus]}"
+      )
+   ref_idx = indices[ref_bus]
+   if ref_idx in busser_alene:
+      raise ValueError(f"Referansebuss {ref_bus} er isolert og ikke koblet til nettet")
+   #---------referansebuss---------
 
 
    #-----------kostnader per generator i €/MWh, hentes fra grid-objektet (cost_per_MW fra gen-arket)-------
@@ -100,14 +151,14 @@ def dcopf(grid, solver="appsi_highs", kopi=False):
       m.B = pyo.Set(initialize=[i for i in range(N) if i not in busser_alene])
       m.L = pyo.Set(initialize=range(len(grener)))
 
-      #--------variabler: produksjon [pu] og spenningsvinkel [rad], bus 0 er referansebussen--------
+      #--------variabler: produksjon [pu] og spenningsvinkel [rad]--------
       def P_grenser(m, g):
          if gen_buss[g] in busser_alene:
             return (0.0, 0.0)
          return (0.0, grid.gen[g].P_max)
       m.P = pyo.Var(m.G, bounds=P_grenser)
       m.theta = pyo.Var(m.B)
-      m.theta[0].fix(float(grid.bus[0].Angle))
+      m.theta[ref_idx].fix(float(grid.bus[ref_idx].Angle))  # referansebussens vinkel holdes fast
 
       #--------flyt på gren l: F = b * (theta_fra - theta_til) [pu]--------
       def flyt_regel(m, l):
@@ -175,7 +226,7 @@ def dcopf(grid, solver="appsi_highs", kopi=False):
    #-----------henter ut resultatene fra modellen-----------
    def hent_resultatene():
       P_gen   = np.array([pyo.value(m.P[g]) for g in m.G])                                # pu
-      vinkler = np.array([pyo.value(m.theta[i]) if i in m.B else float(grid.bus[0].Angle)
+      vinkler = np.array([pyo.value(m.theta[i]) if i in m.B else float(grid.bus[i].Angle)
                           for i in range(N)])                                              # rad
       flyt    = np.array([pyo.value(m.flyt[l]) * Sbase for l in m.L])                      # MW
       Fmax    = np.array([grener[l][4] * Sbase for l in m.L])                              # MW
@@ -300,3 +351,5 @@ if __name__ == "__main__":
    grid = MakeGrid(df)
    dcopf(grid)
    vis_resultater_DCOPF(grid)
+
+   resultater = contingency_analysis(grid)
