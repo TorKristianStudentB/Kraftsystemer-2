@@ -140,9 +140,7 @@ def dc_scopf(grid, solver="appsi_highs", kopi=False):
     # N0 betyr normalnettet.
     # Ellers er tilfellenavnet lik linjen som er utkoblet.
 
-    tilfeller = ["N0"]
-
-    tilfeller += utfallslinjer
+    tilfeller = ["N0", "L1165", "L1288"]
 
     aktive_grener = {
         c: [l for l in grener if l != c]
